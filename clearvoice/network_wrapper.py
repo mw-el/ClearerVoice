@@ -2,6 +2,8 @@ import argparse
 import json
 import yamlargparse
 import torch.nn as nn
+import os
+from pathlib import Path
 
 class network_wrapper(nn.Module):
     """
@@ -20,13 +22,16 @@ class network_wrapper(nn.Module):
         self.config_path = None  # Path to the YAML configuration file
         self.model_name = None  # Model name to be loaded based on the task
 
+        # Base path to project root (one level up from clearvoice/)
+        self.base_path = Path(__file__).parent.parent.resolve()
+
     def load_args_se(self):
         """
         Loads the arguments for the speech enhancement task using a YAML config file.
-        Sets the configuration path and parses all the required parameters such as 
+        Sets the configuration path and parses all the required parameters such as
         input/output paths, model settings, and FFT parameters.
         """
-        self.config_path = 'config/inference/' + self.model_name + '.yaml'
+        self.config_path = str(self.base_path / 'config' / 'inference' / f'{self.model_name}.yaml')
         parser = yamlargparse.ArgumentParser("Settings")
 
         # General model and inference settings
@@ -57,10 +62,10 @@ class network_wrapper(nn.Module):
     def load_args_ss(self):
         """
         Loads the arguments for the speech separation task using a YAML config file.
-        This method sets parameters such as input/output paths, model configurations, 
+        This method sets parameters such as input/output paths, model configurations,
         and encoder/decoder settings for the MossFormer2-based speech separation model.
         """
-        self.config_path = 'config/inference/' + self.model_name + '.yaml'
+        self.config_path = str(self.base_path / 'config' / 'inference' / f'{self.model_name}.yaml')
         parser = yamlargparse.ArgumentParser("Settings")
 
         # General model and inference settings
@@ -111,7 +116,7 @@ class network_wrapper(nn.Module):
         Sets the configuration path and parses all the required parameters such as
         input/output paths, model settings, and FFT parameters.
         """
-        self.config_path = 'config/inference/' + self.model_name + '.yaml'
+        self.config_path = str(self.base_path / 'config' / 'inference' / f'{self.model_name}.yaml')
         parser = yamlargparse.ArgumentParser("Settings")
 
         # General model and inference settings
@@ -141,7 +146,7 @@ class network_wrapper(nn.Module):
         Loads the arguments for the target speaker extraction (TSE) task using a YAML config file.
         Parameters include input/output paths, CUDA configurations, and decoding parameters.
         """
-        self.config_path = 'config/inference/' + self.model_name + '.yaml'
+        self.config_path = str(self.base_path / 'config' / 'inference' / f'{self.model_name}.yaml')
         parser = yamlargparse.ArgumentParser("Settings")
 
         # General model and inference settings

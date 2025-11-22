@@ -2,3 +2,14 @@
 **/.DS_Store
 **/._*
 **/.ipynb_checkpoints/
+
+# Model checkpoints (too large for git)
+checkpoints/
+clearvoice/checkpoints/
+
+# Generated output files
+clearvoice/samples/output_*
+clearvoice/samples/path_to_output_*/
+
+# Old app versions
+clearvoice/app2502*.py

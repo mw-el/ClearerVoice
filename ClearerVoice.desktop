@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=ClearerVoice
+GenericName=Speech Enhancement
+Comment=AI-powered speech enhancement and processing
+Exec=/home/matthias/miniconda3/envs/clearervoice/bin/python /home/matthias/_AA_Clearervoice/clearvoice/app.py
+Path=/home/matthias/_AA_Clearervoice
+Icon=/home/matthias/_AA_Clearervoice/clearervoice.png
+Terminal=false
+Categories=Audio;AudioVideo;
+StartupNotify=true
+StartupWMClass=clearervoice

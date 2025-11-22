@@ -360,8 +360,11 @@ class SpeechModel:
             sample_width=self.data['sample_width'],          # No. bytes per sample
             channels=self.data['channels']               # No. channels
         )
-        audio_format = 'ipod' if self.data['ext'] in ['m4a', 'aac'] else self.data['ext']
-        audio_segment.export(output_path, format=audio_format)
+        # Always export as WAV to preserve quality (avoid generation loss from re-encoding)
+        if not output_path.lower().endswith('.wav'):
+            base = os.path.splitext(output_path)[0]
+            output_path = base + '.wav'
+        audio_segment.export(output_path, format='wav')
                     
     def write(self, output_path, add_subdir=False, use_key=False):
         """
