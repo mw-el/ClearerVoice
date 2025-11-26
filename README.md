@@ -28,6 +28,18 @@
 - **Comprehensive Features:** Combines advanced algorithms for multiple speech processing tasks in one platform.
 - **Community-Driven:** Built for researchers, developers, and enthusiasts to collaborate and innovate together.
 
+## Installation
+
+For quick installation on a new machine, we provide an automated installation script:
+
+```bash
+git clone https://github.com/modelscope/ClearerVoice-Studio.git
+cd ClearerVoice-Studio
+./install.sh
+```
+
+For detailed installation instructions, troubleshooting, and manual installation steps, see **[INSTALL.md](INSTALL.md)**.
+
 ## Contents of this repository
 This repository is organized into three main components: **[ClearVoice](https://github.com/modelscope/ClearerVoice-Studio/tree/main/clearvoice)**, **[Train](https://github.com/modelscope/ClearerVoice-Studio/tree/main/train)**, and **[SpeechScore](https://github.com/modelscope/ClearerVoice-Studio/tree/main/speechscore)**.
 
