@@ -1,13 +1,17 @@
 [Desktop Entry]
-Version=1.0
 Type=Application
 Name=ClearerVoice
 GenericName=Speech Enhancement
 Comment=AI-powered speech enhancement and processing
-Exec=/home/matthias/miniconda3/envs/clearervoice/bin/python /home/matthias/_AA_Clearervoice/clearvoice/app.py
-Path=/home/matthias/_AA_Clearervoice
+Exec=/home/matthias/_AA_Clearervoice/start_clearervoice.sh
 Icon=/home/matthias/_AA_Clearervoice/clearervoice.png
 Terminal=false
-Categories=Audio;AudioVideo;
+Categories=Utility;Audio;AudioVideo;
+Keywords=speech;enhancement;audio;processing;AI;denoise;
 StartupNotify=true
 StartupWMClass=clearervoice
+Actions=Quit;
+
+[Desktop Action Quit]
+Name=Quit ClearerVoice
+Exec=pkill -f "python.*clearvoice.*app.py"

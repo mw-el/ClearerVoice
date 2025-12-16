@@ -2,8 +2,9 @@ import tkinter as tk
 from tkinter import filedialog
 from clearvoice import ClearVoice
 
-# Hide the root window
-root = tk.Tk()
+# Create the root window with className for proper desktop integration
+# This ensures the window is correctly identified in the dock with the right icon
+root = tk.Tk(className='clearervoice')
 root.withdraw()
 
 # Ask user to select an input audio file
