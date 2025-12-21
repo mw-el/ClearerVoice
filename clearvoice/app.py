@@ -145,10 +145,24 @@ def open_file_picker(initialdir=DEFAULT_INPUT_DIR):
     try:
         # Use zenity file picker with multiple selection
         # zenity uses Nautilus as backend and supports bookmarks
+
+        # Build file filter patterns for zenity
+        # Format: --file-filter='Display Name | pattern1 pattern2 pattern3'
+        audio_patterns = ' '.join(f'*{ext}' for ext in AUDIO_EXTENSIONS)
+        video_patterns = ' '.join(f'*{ext}' for ext in VIDEO_EXTENSIONS)
+
+        zenity_cmd = [
+            'zenity', '--file-selection', '--multiple',
+            f'--filename={initialdir}/',
+            '--title=Audio- oder Videodatei auswählen',
+            f'--file-filter=Audio & Video | {audio_patterns} {video_patterns}',
+            f'--file-filter=Audio Dateien | {audio_patterns}',
+            f'--file-filter=Video Dateien | {video_patterns}',
+            '--file-filter=Alle Dateien | *'
+        ]
+
         result = subprocess.run(
-            ['zenity', '--file-selection', '--multiple',
-             f'--filename={initialdir}/',
-             '--title=Audiodatei auswählen'],
+            zenity_cmd,
             capture_output=True,
             text=True,
             timeout=30
