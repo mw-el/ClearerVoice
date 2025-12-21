@@ -357,20 +357,22 @@ class ClearVoiceApp:
             self.log_status("=" * 40)
             self.log_status("Starte Verarbeitung...")
 
-            if self.myClearVoice is None:
-                self.log_status("Lade ClearVoice Modell...")
-                try:
-                    from clearvoice import ClearVoice
-                    self.myClearVoice = ClearVoice(task='speech_enhancement',
-                                                    model_names=['MossFormer2_SE_48K'],
-                                                    apply_loudness_processing_flag=self.apply_loudness_var.get())
-                    self.log_status("Modell geladen!")
-                except Exception as e:
-                    self.log_status(f"FEHLER: {e}")
-                    import traceback
-                    self.log_status(traceback.format_exc())
-                    self._enable_process_btn()
-                    return
+            # Always reload model to respect current loudness checkbox state
+            self.log_status("Lade ClearVoice Modell...")
+            try:
+                from clearvoice import ClearVoice
+                loudness_enabled = self.apply_loudness_var.get()
+                self.log_status(f"  Loudness-Optimierung: {'aktiviert' if loudness_enabled else 'deaktiviert'}")
+                self.myClearVoice = ClearVoice(task='speech_enhancement',
+                                                model_names=['MossFormer2_SE_48K'],
+                                                apply_loudness_processing_flag=loudness_enabled)
+                self.log_status("Modell geladen!")
+            except Exception as e:
+                self.log_status(f"FEHLER: {e}")
+                import traceback
+                self.log_status(traceback.format_exc())
+                self._enable_process_btn()
+                return
 
             # Process all selected files
             total = len(self.selected_files)
@@ -399,6 +401,7 @@ class ClearVoiceApp:
 
                     self.log_status("  Entrausche...")
                     enhanced_audio = self.myClearVoice(input_path=audio_to_process, online_write=False)
+                    self.log_status(f"  Enhancement abgeschlossen")
                     self.myClearVoice.write(enhanced_audio, output_path=cleaned_path)
                     self.log_status(f"  → {os.path.basename(cleaned_path)}")
 
