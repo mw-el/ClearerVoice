@@ -207,37 +207,37 @@ class ClearVoiceApp:
         ttk.Button(options_frame, text="[ + ] Dateien hinzufügen",
                    command=self._open_file_picker).pack(side="left", padx=(0, 10))
 
-        # Checkboxes (middle)
+        # Enhancement checkboxes (SR, Loudness, Video)
         self.apply_sr_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(options_frame, text="SR (48kHz)",
-                        variable=self.apply_sr_var).pack(side="left", padx=(0, 10))
+                        variable=self.apply_sr_var).pack(side="left", padx=(0, 5))
 
         self.apply_loudness_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(options_frame, text="Lautstärke",
-                        variable=self.apply_loudness_var).pack(side="left", padx=(0, 10))
+                        variable=self.apply_loudness_var).pack(side="left", padx=(0, 5))
 
         self.remux_video_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(options_frame, text="Video",
-                        variable=self.remux_video_var).pack(side="left", padx=(0, 10))
+                        variable=self.remux_video_var).pack(side="left", padx=(0, 20))
 
-        # Transcription format checkboxes
-        self.transcribe_txt_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(options_frame, text="TXT",
-                        variable=self.transcribe_txt_var).pack(side="left", padx=(0, 10))
-
-        self.transcribe_srt_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(options_frame, text="SRT",
-                        variable=self.transcribe_srt_var).pack(side="left", padx=(0, 10))
+        # Process button (after enhancement options)
+        self.process_btn = ttk.Button(options_frame, text="Optimieren",
+                                      command=self.process_files)
+        self.process_btn.pack(side="left", padx=(0, 20))
 
         # Transcribe button
         self.transcribe_btn = ttk.Button(options_frame, text="Transcribe",
                                          command=self.transcribe_files)
         self.transcribe_btn.pack(side="left", padx=(0, 10))
 
-        # Process button (in toolbar)
-        self.process_btn = ttk.Button(options_frame, text="Optimieren",
-                                      command=self.process_files)
-        self.process_btn.pack(side="left", padx=(0, 10))
+        # Transcription format checkboxes (TXT, SRT)
+        self.transcribe_txt_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(options_frame, text="TXT",
+                        variable=self.transcribe_txt_var).pack(side="left", padx=(0, 5))
+
+        self.transcribe_srt_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(options_frame, text="SRT",
+                        variable=self.transcribe_srt_var).pack(side="left", padx=(0, 10))
 
         # Main content: Selected files and controls
         right_frame = ttk.Frame(self.root)
