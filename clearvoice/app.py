@@ -608,6 +608,9 @@ class ClearVoiceApp:
                     output_folder = os.path.dirname(input_file)
                     base_name = os.path.splitext(os.path.basename(input_file))[0]
 
+                    # Record time before transcription
+                    before_time = datetime.datetime.now()
+
                     # Check if aTrain environment is available
                     conda_cmd = (
                         "source ~/miniconda3/etc/profile.d/conda.sh && "
@@ -640,8 +643,8 @@ class ClearVoiceApp:
                     # aTrainCore writes to ~/Documents/aTrain/transcriptions/
                     transcriptions_dir = os.path.expanduser("~/Documents/aTrain/transcriptions")
 
-                    # Find newly created transcription files
-                    transcript_files = self._find_transcription_files(transcriptions_dir)
+                    # Find newly created transcription files (only newer than before_time)
+                    transcript_files = self._find_transcription_files(transcriptions_dir, before_time)
 
                     if not transcript_files:
                         self.log_status("  FEHLER: Keine Transkriptions-Dateien gefunden")
@@ -697,8 +700,8 @@ class ClearVoiceApp:
         finally:
             self._enable_transcribe_btn()
 
-    def _find_transcription_files(self, transcriptions_dir):
-        """Find newly created transcription files"""
+    def _find_transcription_files(self, transcriptions_dir, after_time=None):
+        """Find newly created transcription files (optionally filtered by time)"""
         if not os.path.exists(transcriptions_dir):
             return []
 
@@ -706,7 +709,14 @@ class ClearVoiceApp:
         for root, dirs, filenames in os.walk(transcriptions_dir):
             for filename in filenames:
                 if filename in ("transcription.txt", "transcription.srt"):
-                    files.append(os.path.join(root, filename))
+                    filepath = os.path.join(root, filename)
+                    # If after_time is specified, only return files created after that time
+                    if after_time:
+                        mtime = datetime.datetime.fromtimestamp(os.path.getmtime(filepath))
+                        if mtime >= after_time:
+                            files.append(filepath)
+                    else:
+                        files.append(filepath)
 
         return files
 
