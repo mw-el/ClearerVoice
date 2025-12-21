@@ -405,6 +405,10 @@ class ClearVoiceApp:
                     self.log_status("  Entrausche...")
                     if self.apply_loudness_var.get():
                         self.log_status("    (mit Lautstärke-Optimierung)")
+
+                    # DEBUG: Check model state before processing
+                    self.log_status(f"  DEBUG: Model Loudness Flag = {self.myClearVoice.apply_loudness_processing}")
+
                     enhanced_audio = self.myClearVoice(input_path=audio_to_process, online_write=False)
                     self.log_status(f"  Enhancement abgeschlossen")
 
