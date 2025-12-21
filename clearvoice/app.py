@@ -518,11 +518,15 @@ class ClearVoiceApp:
                         final_audio = sr_output
 
                     # Remux video with cleaned audio if requested
+                    self.log_status(f"  DEBUG: is_video={is_video}, remux_enabled={self.remux_video_var.get()}")
                     if is_video and self.remux_video_var.get():
                         self.log_status("  Remuxe Video mit bereinigtem Audio...")
                         remuxed_path = os.path.join(folder, f"{base_name}-cleaned-{timestamp}{ext}")
-                        remux_video_with_audio(input_file, final_audio, remuxed_path)
-                        self.log_status(f"  → {os.path.basename(remuxed_path)}")
+                        try:
+                            remux_video_with_audio(input_file, final_audio, remuxed_path)
+                            self.log_status(f"  → {os.path.basename(remuxed_path)}")
+                        except Exception as remux_error:
+                            self.log_status(f"  ✗ Remuxing fehlgeschlagen: {remux_error}")
 
                     self.log_status("  [OK] Fertig!")
 
