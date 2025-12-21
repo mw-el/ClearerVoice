@@ -6,6 +6,7 @@ import datetime
 import tkinter as tk
 from tkinter import ttk, messagebox, filedialog
 import threading
+import shutil
 
 print("DEBUG: Starte Skript...")
 
@@ -214,6 +215,7 @@ class ClearVoiceApp:
         self.selected_files = []
         self.myClearVoice = None
         self.myClearVoice_SR = None
+        self.checked_files = set()  # Track which files are checked in treeview
 
         self.create_widgets()
         print("DEBUG: GUI initialisiert")
@@ -228,28 +230,48 @@ class ClearVoiceApp:
                    command=self._open_file_picker).pack(side="left", padx=(0, 10))
 
         # Checkboxes (middle)
-        self.apply_sr_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(options_frame, text="Super-Resolution (48kHz)",
+        self.apply_sr_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(options_frame, text="[✓] SR (48kHz)",
                         variable=self.apply_sr_var).pack(side="left", padx=(0, 10))
 
-        self.apply_loudness_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(options_frame, text="Lautstärke-Optimierung",
+        self.apply_loudness_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(options_frame, text="[✓] Lautstärke",
                         variable=self.apply_loudness_var).pack(side="left", padx=(0, 10))
 
         self.remux_video_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(options_frame, text="Video mit Audio remuxen",
+        ttk.Checkbutton(options_frame, text="[✓] Video",
                         variable=self.remux_video_var).pack(side="left", padx=(0, 10))
 
-        # Clear button (right side)
-        ttk.Button(options_frame, text="Liste leeren",
-                   command=self.clear_files).pack(side="right")
+        # Transcription format checkboxes
+        self.transcribe_txt_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(options_frame, text="[✓] TXT",
+                        variable=self.transcribe_txt_var).pack(side="left", padx=(0, 10))
+
+        self.transcribe_srt_var = tk.BooleanVar(value=True)
+        ttk.Checkbutton(options_frame, text="[✓] SRT",
+                        variable=self.transcribe_srt_var).pack(side="left", padx=(0, 10))
+
+        # Transcribe button
+        self.transcribe_btn = ttk.Button(options_frame, text="[ T ]",
+                                         command=self.transcribe_files)
+        self.transcribe_btn.pack(side="left", padx=(0, 10))
 
         # Main content: Selected files and controls
         right_frame = ttk.Frame(self.root)
         right_frame.pack(fill="both", expand=True, padx=5, pady=5)
 
-        # Selected files list
-        list_frame = ttk.LabelFrame(right_frame, text="Ausgewählte Dateien")
+        # Selected files list with "Check All" checkbox
+        list_header_frame = ttk.Frame(right_frame)
+        list_header_frame.pack(fill="x", padx=5, pady=(5, 0))
+
+        ttk.Label(list_header_frame, text="Ausgewählte Dateien").pack(side="left")
+
+        self.check_all_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(list_header_frame, text="Alle auswählen",
+                        variable=self.check_all_var,
+                        command=self._toggle_all_files).pack(side="right", padx=(0, 5))
+
+        list_frame = ttk.LabelFrame(right_frame, text="")
         list_frame.pack(fill="both", expand=True, padx=5, pady=5)
 
         list_container = ttk.Frame(list_frame)
@@ -258,14 +280,20 @@ class ClearVoiceApp:
         scrollbar = ttk.Scrollbar(list_container)
         scrollbar.pack(side="right", fill="y")
 
-        self.file_listbox = tk.Listbox(list_container, yscrollcommand=scrollbar.set,
-                                        font=MONO_FONT, selectmode="extended")
-        self.file_listbox.pack(side="left", fill="both", expand=True)
-        scrollbar.config(command=self.file_listbox.yview)
+        # Create Treeview with checkbox column
+        self.file_tree = ttk.Treeview(list_container, columns=("checked", "filename"),
+                                      show="tree", yscrollcommand=scrollbar.set, height=10)
+        self.file_tree.pack(side="left", fill="both", expand=True)
+        scrollbar.config(command=self.file_tree.yview)
 
-        # Remove button
-        ttk.Button(list_frame, text="Ausgewählte entfernen",
-                   command=self.remove_selected).pack(anchor="w", padx=5, pady=5)
+        # Configure columns
+        self.file_tree.column("#0", width=0, stretch=tk.NO)
+        self.file_tree.column("checked", width=30, anchor="center")
+        self.file_tree.column("filename", anchor="w")
+
+        # Bind events for checkbox toggling
+        self.file_tree.bind("<Button-1>", self._on_treeview_click)
+        self.file_tree.bind("<Button-3>", self._on_treeview_right_click)
 
         # Process button
         process_frame = ttk.Frame(right_frame)
@@ -303,8 +331,100 @@ class ClearVoiceApp:
         """Add a single file to the selection"""
         if filepath not in self.selected_files:
             self.selected_files.append(filepath)
-            self.file_listbox.insert("end", filepath)
+            # Add to treeview with checkbox
+            item_id = self.file_tree.insert("", "end", values=("[ ]", os.path.basename(filepath)))
+            self.checked_files.add(item_id)  # Default checked
+            self._update_treeview_item(item_id)  # Update display
             self.log_status(f"+ {os.path.basename(filepath)}")
+
+    def _update_treeview_item(self, item_id):
+        """Update treeview item display based on checked state"""
+        checkbox = "[✓]" if item_id in self.checked_files else "[ ]"
+        values = self.file_tree.item(item_id, "values")
+        self.file_tree.item(item_id, values=(checkbox, values[1]))
+
+    def _on_treeview_click(self, event):
+        """Handle left-click on treeview (toggle checkbox)"""
+        region = self.file_tree.identify_region(event.x, event.y)
+        if region == "cell":
+            col = self.file_tree.identify_column(event.x)
+            item = self.file_tree.identify_row(event.y)
+            if item and col == "#1":  # Clicked on checkbox column
+                if item in self.checked_files:
+                    self.checked_files.discard(item)
+                else:
+                    self.checked_files.add(item)
+                self._update_treeview_item(item)
+                self._update_check_all_status()
+
+    def _on_treeview_right_click(self, event):
+        """Handle right-click on treeview (context menu)"""
+        item = self.file_tree.identify_row(event.y)
+        if item:
+            # Show context menu
+            context_menu = tk.Menu(self.root, tearoff=0)
+            context_menu.add_command(
+                label="Löschen",
+                command=lambda: self._delete_file_item(item)
+            )
+            context_menu.add_separator()
+            context_menu.add_command(
+                label="Alle auswählen",
+                command=self._select_all_items
+            )
+            context_menu.add_command(
+                label="Auswahl aufheben",
+                command=self._deselect_all_items
+            )
+            context_menu.post(event.x_root, event.y_root)
+
+    def _delete_file_item(self, item_id):
+        """Delete a file from the list"""
+        values = self.file_tree.item(item_id, "values")
+        filename = values[1]
+        # Find and remove from selected_files
+        for i, f in enumerate(self.selected_files):
+            if os.path.basename(f) == filename:
+                removed = self.selected_files.pop(i)
+                break
+        # Remove from treeview and checked_files
+        self.file_tree.delete(item_id)
+        self.checked_files.discard(item_id)
+        self.log_status(f"- {filename}")
+
+    def _toggle_all_files(self):
+        """Toggle all files checked/unchecked"""
+        if self.check_all_var.get():
+            for item_id in self.file_tree.get_children():
+                self.checked_files.add(item_id)
+                self._update_treeview_item(item_id)
+        else:
+            for item_id in self.file_tree.get_children():
+                self.checked_files.discard(item_id)
+                self._update_treeview_item(item_id)
+
+    def _update_check_all_status(self):
+        """Update Check All checkbox based on individual items"""
+        items = self.file_tree.get_children()
+        if not items:
+            self.check_all_var.set(False)
+            return
+        all_checked = all(item in self.checked_files for item in items)
+        self.check_all_var.set(all_checked)
+
+    def _select_all_items(self):
+        """Select all items via context menu"""
+        for item_id in self.file_tree.get_children():
+            self.checked_files.add(item_id)
+            self._update_treeview_item(item_id)
+        self.check_all_var.set(True)
+
+    def _deselect_all_items(self):
+        """Deselect all items via context menu"""
+        for item_id in self.file_tree.get_children():
+            self.checked_files.discard(item_id)
+            self._update_treeview_item(item_id)
+        self.check_all_var.set(False)
 
     def log_status(self, message):
         """Add message to status window"""
@@ -318,16 +438,17 @@ class ClearVoiceApp:
     def clear_files(self):
         """Clear all files from list"""
         self.selected_files.clear()
-        self.file_listbox.delete(0, "end")
+        self.file_tree.delete(*self.file_tree.get_children())
+        self.checked_files.clear()
+        self.check_all_var.set(False)
         self.log_status("Liste geleert")
 
     def remove_selected(self):
-        """Remove selected files from list"""
-        selection = self.file_listbox.curselection()
-        for i in reversed(selection):
-            removed = self.selected_files.pop(i)
-            self.file_listbox.delete(i)
-            self.log_status(f"- {os.path.basename(removed)}")
+        """Remove selected files from list (legacy - kept for compatibility)"""
+        items_to_delete = [item for item in self.file_tree.get_children()
+                          if item in self.checked_files]
+        for item_id in items_to_delete:
+            self._delete_file_item(item_id)
 
     def process_files(self):
         """Process all selected files"""
@@ -434,6 +555,165 @@ class ClearVoiceApp:
 
         finally:
             self._enable_process_btn()
+
+    def transcribe_files(self):
+        """Transcribe all checked files using aTrainCore"""
+        # Get checked files only
+        checked_items = [item for item in self.file_tree.get_children()
+                        if item in self.checked_files]
+
+        if not checked_items:
+            messagebox.showwarning("Keine Dateien", "Bitte erst Dateien auswählen!")
+            return
+
+        # Check if at least one output format is selected
+        if not (self.transcribe_txt_var.get() or self.transcribe_srt_var.get()):
+            messagebox.showwarning("Kein Format", "Bitte TXT oder SRT auswählen!")
+            return
+
+        self.transcribe_btn.config(state="disabled", text="[ … ]")
+        thread = threading.Thread(target=self._transcribe_files_thread)
+        thread.start()
+
+    def _transcribe_files_thread(self):
+        """Background thread for transcription"""
+        try:
+            self.log_status("=" * 40)
+            self.log_status("Starte Transkription...")
+
+            # Get checked files only
+            checked_items = [item for item in self.file_tree.get_children()
+                            if item in self.checked_files]
+
+            total = len(checked_items)
+            for idx, item_id in enumerate(checked_items, 1):
+                values = self.file_tree.item(item_id, "values")
+                filename = values[1]
+
+                # Find full path from selected_files
+                input_file = None
+                for f in self.selected_files:
+                    if os.path.basename(f) == filename:
+                        input_file = f
+                        break
+
+                if not input_file:
+                    self.log_status(f"[{idx}/{total}] FEHLER: Datei nicht gefunden: {filename}")
+                    continue
+
+                self.log_status(f"\n[{idx}/{total}] Transkribiere: {filename}")
+
+                try:
+                    # Get output folder and base name
+                    output_folder = os.path.dirname(input_file)
+                    base_name = os.path.splitext(os.path.basename(input_file))[0]
+
+                    # Check if aTrain environment is available
+                    conda_cmd = (
+                        "source ~/miniconda3/etc/profile.d/conda.sh && "
+                        "conda activate atrain && "
+                    )
+
+                    # Build aTrainCore command
+                    transcribe_cmd = (
+                        f"aTrain_core transcribe \"{input_file}\" "
+                        f"--model large-v3-turbo "
+                        f"--language auto-detect "
+                        f"--device GPU "
+                        f"--compute_type float16"
+                    )
+
+                    cmd = ["bash", "-c", conda_cmd + transcribe_cmd]
+
+                    self.log_status("  Starte aTrain_core...")
+                    result = subprocess.run(
+                        cmd,
+                        capture_output=True,
+                        text=True,
+                        timeout=600  # 10 minutes timeout
+                    )
+
+                    if result.returncode != 0:
+                        self.log_status(f"  aTrain_core Fehler: {result.stderr[:200]}")
+                        continue
+
+                    # aTrainCore writes to ~/Documents/aTrain/transcriptions/
+                    transcriptions_dir = os.path.expanduser("~/Documents/aTrain/transcriptions")
+
+                    # Find newly created transcription files
+                    transcript_files = self._find_transcription_files(transcriptions_dir)
+
+                    if not transcript_files:
+                        self.log_status("  FEHLER: Keine Transkriptions-Dateien gefunden")
+                        continue
+
+                    # Move and rename files
+                    for transcript_file in transcript_files:
+                        base_transcript = os.path.basename(transcript_file)
+
+                        # Check if we should keep this format
+                        keep_file = False
+                        if "transcription.txt" in base_transcript and self.transcribe_txt_var.get():
+                            keep_file = True
+                            output_name = f"{base_name}.txt"
+                        elif "transcription.srt" in base_transcript and self.transcribe_srt_var.get():
+                            keep_file = True
+                            output_name = f"{base_name}.srt"
+
+                        if keep_file:
+                            output_path = os.path.join(output_folder, output_name)
+                            # Handle existing files
+                            if os.path.exists(output_path):
+                                timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+                                base, ext = os.path.splitext(output_path)
+                                output_path = f"{base}_{timestamp}{ext}"
+
+                            shutil.move(transcript_file, output_path)
+                            self.log_status(f"  ✓ {output_name}")
+                        else:
+                            # Delete unwanted files
+                            try:
+                                os.remove(transcript_file)
+                            except:
+                                pass
+
+                    self.log_status("  [OK] Fertig!")
+
+                except subprocess.TimeoutExpired:
+                    self.log_status(f"  FEHLER: Timeout (zu lange)")
+                except Exception as e:
+                    self.log_status(f"  FEHLER: {str(e)}")
+                    import traceback
+                    self.log_status(traceback.format_exc())
+
+            self.log_status("\n" + "=" * 40)
+            self.log_status(f"Transkription abgeschlossen!")
+
+        except Exception as e:
+            self.log_status(f"FEHLER: {e}")
+            import traceback
+            self.log_status(traceback.format_exc())
+
+        finally:
+            self._enable_transcribe_btn()
+
+    def _find_transcription_files(self, transcriptions_dir):
+        """Find newly created transcription files"""
+        if not os.path.exists(transcriptions_dir):
+            return []
+
+        files = []
+        for root, dirs, filenames in os.walk(transcriptions_dir):
+            for filename in filenames:
+                if filename in ("transcription.txt", "transcription.srt"):
+                    files.append(os.path.join(root, filename))
+
+        return files
+
+    def _enable_transcribe_btn(self):
+        """Re-enable transcribe button"""
+        self.root.after(0, lambda: self.transcribe_btn.config(state="normal",
+                                                             text="[ T ]"))
 
     def _enable_process_btn(self):
         """Re-enable process button"""
