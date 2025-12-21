@@ -524,17 +524,36 @@ class ClearVoiceApp:
                         timeout=600  # 10 minutes timeout
                     )
 
+                    self.log_status(f"  DEBUG: aTrain returncode = {result.returncode}")
                     if result.returncode != 0:
-                        self.log_status(f"  aTrain_core Fehler: {result.stderr[:200]}")
+                        self.log_status(f"  aTrain_core Fehler: {result.stderr[:500]}")
+                        self.log_status(f"  aTrain stdout: {result.stdout[:500]}")
                         continue
+                    else:
+                        self.log_status(f"  aTrain_core erfolgreich")
 
                     # aTrainCore writes to ~/Documents/aTrain/transcriptions/
                     transcriptions_dir = os.path.expanduser("~/Documents/aTrain/transcriptions")
+                    self.log_status(f"  Suche Transkriptionen in: {transcriptions_dir}")
+
+                    # Check if directory exists
+                    if not os.path.exists(transcriptions_dir):
+                        self.log_status(f"  DEBUG: Verzeichnis existiert nicht!")
+                        # Try to find transcriptions in current directory
+                        transcriptions_dir = output_folder
+                        self.log_status(f"  Versuche stattdessen: {transcriptions_dir}")
 
                     # Find newly created transcription files (only newer than before_time)
                     transcript_files = self._find_transcription_files(transcriptions_dir, before_time)
+                    self.log_status(f"  DEBUG: Gefundene Dateien: {len(transcript_files)}")
 
                     if not transcript_files:
+                        # List what's in the directory for debugging
+                        try:
+                            files_in_dir = os.listdir(transcriptions_dir) if os.path.exists(transcriptions_dir) else []
+                            self.log_status(f"  DEBUG: Dateien im Verzeichnis: {files_in_dir[-5:]}")  # Last 5 files
+                        except:
+                            pass
                         self.log_status("  FEHLER: Keine Transkriptions-Dateien gefunden")
                         continue
 
