@@ -136,21 +136,46 @@ print(f"DEBUG: Font-Größe: {SCALED_FONT_SIZE}")
 
 
 # --------- File Selection Helper ---------
-def open_file_picker(initialdir=DEFAULT_INPUT_DIR, title="Audiodatei auswählen"):
-    """Open system file picker for selecting audio/video files"""
-    filetypes = [
-        ("Audio & Video", tuple(AUDIO_EXTENSIONS | VIDEO_EXTENSIONS)),
-        ("Audio Files", tuple(AUDIO_EXTENSIONS)),
-        ("Video Files", tuple(VIDEO_EXTENSIONS)),
-        ("All Files", ("*.*",)),
-    ]
+def open_file_picker(initialdir=DEFAULT_INPUT_DIR):
+    """Open file picker using Nautilus-based dialog with bookmarks support
 
-    files = filedialog.askopenfilenames(
-        title=title,
-        initialdir=initialdir,
-        filetypes=filetypes
-    )
-    return files
+    Tries zenity (GNOME file picker) first, which uses Nautilus backend.
+    Falls back to tkinter if zenity is not available.
+    """
+    try:
+        # Use zenity file picker with multiple selection
+        # zenity uses Nautilus as backend and supports bookmarks
+        result = subprocess.run(
+            ['zenity', '--file-selection', '--multiple',
+             f'--filename={initialdir}/',
+             '--title=Audiodatei auswählen'],
+            capture_output=True,
+            text=True,
+            timeout=30
+        )
+
+        if result.returncode == 0 and result.stdout:
+            # zenity returns paths separated by |
+            files = result.stdout.strip().split('|')
+            return tuple(files)
+        else:
+            return ()
+
+    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
+        # Fallback to tkinter file picker if zenity is not available
+        print("DEBUG: zenity not found, using tkinter file picker instead")
+        filetypes = [
+            ("Audio & Video", tuple(AUDIO_EXTENSIONS | VIDEO_EXTENSIONS)),
+            ("Audio Files", tuple(AUDIO_EXTENSIONS)),
+            ("Video Files", tuple(VIDEO_EXTENSIONS)),
+            ("All Files", ("*.*",)),
+        ]
+        files = filedialog.askopenfilenames(
+            title="Audiodatei auswählen",
+            initialdir=initialdir,
+            filetypes=filetypes
+        )
+        return files
 
 
 class ClearVoiceApp:
