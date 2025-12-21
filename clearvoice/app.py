@@ -193,7 +193,6 @@ class ClearVoiceApp:
         self.selected_files = []
         self.myClearVoice = None
         self.myClearVoice_SR = None
-        self.checked_files = set()  # Track which files are checked in treeview
 
         self.create_widgets()
         print("DEBUG: GUI initialisiert")
@@ -243,16 +242,11 @@ class ClearVoiceApp:
         right_frame = ttk.Frame(self.root)
         right_frame.pack(fill="both", expand=True, padx=5, pady=5)
 
-        # Selected files list with "Check All" checkbox
+        # Selected files list
         list_header_frame = ttk.Frame(right_frame)
         list_header_frame.pack(fill="x", padx=5, pady=(5, 0))
 
         ttk.Label(list_header_frame, text="Ausgewählte Dateien").pack(side="left")
-
-        self.check_all_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton(list_header_frame, text="Alle auswählen",
-                        variable=self.check_all_var,
-                        command=self._toggle_all_files).pack(side="right", padx=(0, 5))
 
         list_frame = ttk.LabelFrame(right_frame, text="")
         list_frame.pack(fill="both", expand=True, padx=5, pady=5)
@@ -263,19 +257,17 @@ class ClearVoiceApp:
         scrollbar = ttk.Scrollbar(list_container)
         scrollbar.pack(side="right", fill="y")
 
-        # Create Treeview with checkbox column
-        self.file_tree = ttk.Treeview(list_container, columns=("checked", "filename"),
-                                      show="tree", yscrollcommand=scrollbar.set, height=10)
+        # Create simple Treeview for file list
+        self.file_tree = ttk.Treeview(list_container, columns=("filename",),
+                                      show="headings", yscrollcommand=scrollbar.set, height=10)
         self.file_tree.pack(side="left", fill="both", expand=True)
         scrollbar.config(command=self.file_tree.yview)
 
-        # Configure columns
-        self.file_tree.column("#0", width=0, stretch=tk.NO)
-        self.file_tree.column("checked", width=30, anchor="center")
+        # Configure column
+        self.file_tree.heading("filename", text="Dateiname")
         self.file_tree.column("filename", anchor="w")
 
-        # Bind events for checkbox toggling
-        self.file_tree.bind("<Button-1>", self._on_treeview_click)
+        # Bind right-click for context menu
         self.file_tree.bind("<Button-3>", self._on_treeview_right_click)
 
         # Status frame
@@ -305,31 +297,9 @@ class ClearVoiceApp:
         """Add a single file to the selection"""
         if filepath not in self.selected_files:
             self.selected_files.append(filepath)
-            # Add to treeview with checkbox
-            item_id = self.file_tree.insert("", "end", values=(" ", os.path.basename(filepath)))
-            self.checked_files.add(item_id)  # Default checked
-            self._update_treeview_item(item_id)  # Update display
+            # Add to treeview
+            self.file_tree.insert("", "end", values=(os.path.basename(filepath),))
             self.log_status(f"+ {os.path.basename(filepath)}")
-
-    def _update_treeview_item(self, item_id):
-        """Update treeview item display based on checked state"""
-        checkbox = "✓" if item_id in self.checked_files else " "
-        values = self.file_tree.item(item_id, "values")
-        self.file_tree.item(item_id, values=(checkbox, values[1]))
-
-    def _on_treeview_click(self, event):
-        """Handle left-click on treeview (toggle checkbox)"""
-        region = self.file_tree.identify_region(event.x, event.y)
-        if region == "cell":
-            col = self.file_tree.identify_column(event.x)
-            item = self.file_tree.identify_row(event.y)
-            if item and col == "#1":  # Clicked on checkbox column
-                if item in self.checked_files:
-                    self.checked_files.discard(item)
-                else:
-                    self.checked_files.add(item)
-                self._update_treeview_item(item)
-                self._update_check_all_status()
 
     def _on_treeview_right_click(self, event):
         """Handle right-click on treeview (context menu)"""
@@ -341,64 +311,20 @@ class ClearVoiceApp:
                 label="Löschen",
                 command=lambda: self._delete_file_item(item)
             )
-            context_menu.add_separator()
-            context_menu.add_command(
-                label="Alle auswählen",
-                command=self._select_all_items
-            )
-            context_menu.add_command(
-                label="Auswahl aufheben",
-                command=self._deselect_all_items
-            )
             context_menu.post(event.x_root, event.y_root)
 
     def _delete_file_item(self, item_id):
         """Delete a file from the list"""
         values = self.file_tree.item(item_id, "values")
-        filename = values[1]
+        filename = values[0]
         # Find and remove from selected_files
         for i, f in enumerate(self.selected_files):
             if os.path.basename(f) == filename:
-                removed = self.selected_files.pop(i)
+                self.selected_files.pop(i)
                 break
-        # Remove from treeview and checked_files
+        # Remove from treeview
         self.file_tree.delete(item_id)
-        self.checked_files.discard(item_id)
         self.log_status(f"- {filename}")
-
-    def _toggle_all_files(self):
-        """Toggle all files checked/unchecked"""
-        if self.check_all_var.get():
-            for item_id in self.file_tree.get_children():
-                self.checked_files.add(item_id)
-                self._update_treeview_item(item_id)
-        else:
-            for item_id in self.file_tree.get_children():
-                self.checked_files.discard(item_id)
-                self._update_treeview_item(item_id)
-
-    def _update_check_all_status(self):
-        """Update Check All checkbox based on individual items"""
-        items = self.file_tree.get_children()
-        if not items:
-            self.check_all_var.set(False)
-            return
-        all_checked = all(item in self.checked_files for item in items)
-        self.check_all_var.set(all_checked)
-
-    def _select_all_items(self):
-        """Select all items via context menu"""
-        for item_id in self.file_tree.get_children():
-            self.checked_files.add(item_id)
-            self._update_treeview_item(item_id)
-        self.check_all_var.set(True)
-
-    def _deselect_all_items(self):
-        """Deselect all items via context menu"""
-        for item_id in self.file_tree.get_children():
-            self.checked_files.discard(item_id)
-            self._update_treeview_item(item_id)
-        self.check_all_var.set(False)
 
     def log_status(self, message):
         """Add message to status window"""
@@ -413,16 +339,7 @@ class ClearVoiceApp:
         """Clear all files from list"""
         self.selected_files.clear()
         self.file_tree.delete(*self.file_tree.get_children())
-        self.checked_files.clear()
-        self.check_all_var.set(False)
         self.log_status("Liste geleert")
-
-    def remove_selected(self):
-        """Remove selected files from list (legacy - kept for compatibility)"""
-        items_to_delete = [item for item in self.file_tree.get_children()
-                          if item in self.checked_files]
-        for item_id in items_to_delete:
-            self._delete_file_item(item_id)
 
     def process_files(self):
         """Process all selected files"""
@@ -455,20 +372,9 @@ class ClearVoiceApp:
                     self._enable_process_btn()
                     return
 
-            # Get checked files only
-            checked_items = [item for item in self.file_tree.get_children()
-                            if item in self.checked_files]
-            files_to_process = []
-            for item_id in checked_items:
-                values = self.file_tree.item(item_id, "values")
-                filename = values[1]
-                for f in self.selected_files:
-                    if os.path.basename(f) == filename:
-                        files_to_process.append(f)
-                        break
-
-            total = len(files_to_process)
-            for i, input_file in enumerate(files_to_process, 1):
+            # Process all selected files
+            total = len(self.selected_files)
+            for i, input_file in enumerate(self.selected_files, 1):
                 self.log_status(f"\n[{i}/{total}] {os.path.basename(input_file)}")
 
                 try:
@@ -547,12 +453,8 @@ class ClearVoiceApp:
             self._enable_process_btn()
 
     def transcribe_files(self):
-        """Transcribe all checked files using aTrainCore"""
-        # Get checked files only
-        checked_items = [item for item in self.file_tree.get_children()
-                        if item in self.checked_files]
-
-        if not checked_items:
+        """Transcribe all selected files using aTrainCore"""
+        if not self.selected_files:
             messagebox.showwarning("Keine Dateien", "Bitte erst Dateien auswählen!")
             return
 
@@ -571,26 +473,9 @@ class ClearVoiceApp:
             self.log_status("=" * 40)
             self.log_status("Starte Transkription...")
 
-            # Get checked files only
-            checked_items = [item for item in self.file_tree.get_children()
-                            if item in self.checked_files]
-
-            total = len(checked_items)
-            for idx, item_id in enumerate(checked_items, 1):
-                values = self.file_tree.item(item_id, "values")
-                filename = values[1]
-
-                # Find full path from selected_files
-                input_file = None
-                for f in self.selected_files:
-                    if os.path.basename(f) == filename:
-                        input_file = f
-                        break
-
-                if not input_file:
-                    self.log_status(f"[{idx}/{total}] FEHLER: Datei nicht gefunden: {filename}")
-                    continue
-
+            total = len(self.selected_files)
+            for idx, input_file in enumerate(self.selected_files, 1):
+                filename = os.path.basename(input_file)
                 self.log_status(f"\n[{idx}/{total}] Transkribiere: {filename}")
 
                 try:
