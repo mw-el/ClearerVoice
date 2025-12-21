@@ -4,7 +4,7 @@ import sys
 import subprocess
 import datetime
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, filedialog
 import threading
 
 print("DEBUG: Starte Skript...")
@@ -135,7 +135,25 @@ MONO_FONT = ('Monospace', SCALED_FONT_SIZE - 1)
 print(f"DEBUG: Font-Größe: {SCALED_FONT_SIZE}")
 
 
-# --------- Tooltip Class ---------
+# --------- File Selection Helper ---------
+def open_file_picker(initialdir=DEFAULT_INPUT_DIR, title="Audiodatei auswählen"):
+    """Open system file picker for selecting audio/video files"""
+    filetypes = [
+        ("Audio & Video", tuple(AUDIO_EXTENSIONS | VIDEO_EXTENSIONS)),
+        ("Audio Files", tuple(AUDIO_EXTENSIONS)),
+        ("Video Files", tuple(VIDEO_EXTENSIONS)),
+        ("All Files", ("*.*",)),
+    ]
+
+    files = filedialog.askopenfilenames(
+        title=title,
+        initialdir=initialdir,
+        filetypes=filetypes
+    )
+    return files
+
+
+# --------- Main Application Class ---------
 class TreeTooltip:
     """Tooltip for Treeview items showing full path"""
 
@@ -450,19 +468,28 @@ class ClearVoiceApp:
         self.paned = ttk.PanedWindow(self.root, orient="horizontal")
         self.paned.pack(fill="both", expand=True, padx=5, pady=5)
 
-        # Left side: File Browser
-        left_frame = ttk.LabelFrame(self.paned, text="Dateien durchsuchen")
-        self.paned.add(left_frame, weight=1)
+        # Left side: File Selection Panel
+        left_frame = ttk.LabelFrame(self.paned, text="Dateien auswählen")
+        self.paned.add(left_frame, weight=0)
 
-        self.file_browser = FileBrowser(left_frame, DEFAULT_INPUT_DIR,
-                                         on_file_select=self.add_file)
-        self.file_browser.pack(fill="both", expand=True, padx=5, pady=5)
-
-        # Add selected button under browser
+        # File picker button (takes minimal space)
         btn_frame = ttk.Frame(left_frame)
-        btn_frame.pack(fill="x", padx=5, pady=5)
-        ttk.Button(btn_frame, text="Ausgewählte hinzufügen",
-                   command=self._add_selected_from_browser).pack(fill="x")
+        btn_frame.pack(fill="both", expand=True, padx=5, pady=5)
+
+        ttk.Button(btn_frame, text="📁 Audiodateien hinzufügen...",
+                   command=self._open_file_picker).pack(fill="both", expand=True, pady=5)
+
+        # Instructions label
+        instructions_text = (
+            "Klicke auf 'Audiodateien hinzufügen...'\n"
+            "um eine oder mehrere Dateien\n"
+            "auszuwählen (MP3, WAV, Video, etc.).\n\n"
+            "Konfiguriere die Optionen rechts,\n"
+            "und klicke dann auf\n"
+            "'Dateien verarbeiten'."
+        )
+        ttk.Label(btn_frame, text=instructions_text, justify="left",
+                 font=('Segoe UI', int(10 * DPI_SCALE))).pack(fill="both", expand=True, padx=10, pady=10)
 
         # Right side: Selected files and controls
         right_frame = ttk.Frame(self.paned)
@@ -531,9 +558,12 @@ class ClearVoiceApp:
         self.status_text.pack(side="left", fill="both", expand=True)
         status_scrollbar.config(command=self.status_text.yview)
 
-    def _add_selected_from_browser(self):
-        """Add files selected in browser to the list"""
-        self.file_browser.add_selected_files()
+    def _open_file_picker(self):
+        """Open system file picker to select audio/video files"""
+        files = open_file_picker(initialdir=DEFAULT_INPUT_DIR)
+        if files:
+            for filepath in files:
+                self.add_file(filepath)
 
     def add_file(self, filepath):
         """Add a single file to the selection"""
