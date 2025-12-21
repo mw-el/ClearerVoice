@@ -138,59 +138,41 @@ print(f"DEBUG: Font-Größe: {SCALED_FONT_SIZE}")
 
 # --------- File Selection Helper ---------
 def open_file_picker(initialdir=DEFAULT_INPUT_DIR):
-    """Open file picker using Nautilus-based dialog with bookmarks support
+    """Open file picker using Nautilus-based dialog with bookmarks support"""
+    # Build file filter patterns for zenity
+    # Format: --file-filter='Display Name | pattern1 pattern2 pattern3'
+    audio_patterns = ' '.join(f'*{ext}' for ext in AUDIO_EXTENSIONS)
+    video_patterns = ' '.join(f'*{ext}' for ext in VIDEO_EXTENSIONS)
 
-    Tries zenity (GNOME file picker) first, which uses Nautilus backend.
-    Falls back to tkinter if zenity is not available.
-    """
+    zenity_cmd = [
+        'zenity', '--file-selection', '--multiple',
+        f'--filename={initialdir}/',
+        '--title=Audio- oder Videodatei auswählen',
+        f'--file-filter=Audio & Video | {audio_patterns} {video_patterns}',
+        f'--file-filter=Audio Dateien | {audio_patterns}',
+        f'--file-filter=Video Dateien | {video_patterns}',
+        '--file-filter=Alle Dateien | *'
+    ]
+
     try:
-        # Use zenity file picker with multiple selection
-        # zenity uses Nautilus as backend and supports bookmarks
-
-        # Build file filter patterns for zenity
-        # Format: --file-filter='Display Name | pattern1 pattern2 pattern3'
-        audio_patterns = ' '.join(f'*{ext}' for ext in AUDIO_EXTENSIONS)
-        video_patterns = ' '.join(f'*{ext}' for ext in VIDEO_EXTENSIONS)
-
-        zenity_cmd = [
-            'zenity', '--file-selection', '--multiple',
-            f'--filename={initialdir}/',
-            '--title=Audio- oder Videodatei auswählen',
-            f'--file-filter=Audio & Video | {audio_patterns} {video_patterns}',
-            f'--file-filter=Audio Dateien | {audio_patterns}',
-            f'--file-filter=Video Dateien | {video_patterns}',
-            '--file-filter=Alle Dateien | *'
-        ]
-
         result = subprocess.run(
             zenity_cmd,
             capture_output=True,
             text=True,
-            timeout=30
+            timeout=60,
+            check=False
         )
 
         if result.returncode == 0 and result.stdout:
             # zenity returns paths separated by |
             files = result.stdout.strip().split('|')
-            return tuple(files)
+            return tuple(f for f in files if f)  # Filter empty strings
         else:
             return ()
 
-    except (FileNotFoundError, subprocess.TimeoutExpired, OSError):
-        # Fallback to tkinter file picker if zenity is not available
-        print("DEBUG: zenity not found, using tkinter file picker instead")
-        filetypes = [
-            ("Audio & Video", tuple(AUDIO_EXTENSIONS | VIDEO_EXTENSIONS)),
-            ("Audio Files", tuple(AUDIO_EXTENSIONS)),
-            ("Video Files", tuple(VIDEO_EXTENSIONS)),
-            ("All Files", ("*.*",)),
-        ]
-        files = filedialog.askopenfilenames(
-            title="Audiodatei auswählen",
-            initialdir=initialdir,
-            filetypes=filetypes
-        )
-        return files
+    except Exception as e:
+        print(f"DEBUG: File picker error: {e}")
+        return ()
 
 
 class ClearVoiceApp:
@@ -231,28 +213,28 @@ class ClearVoiceApp:
 
         # Checkboxes (middle)
         self.apply_sr_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(options_frame, text="[✓] SR (48kHz)",
+        ttk.Checkbutton(options_frame, text="SR (48kHz)",
                         variable=self.apply_sr_var).pack(side="left", padx=(0, 10))
 
         self.apply_loudness_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(options_frame, text="[✓] Lautstärke",
+        ttk.Checkbutton(options_frame, text="Lautstärke",
                         variable=self.apply_loudness_var).pack(side="left", padx=(0, 10))
 
         self.remux_video_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(options_frame, text="[✓] Video",
+        ttk.Checkbutton(options_frame, text="Video",
                         variable=self.remux_video_var).pack(side="left", padx=(0, 10))
 
         # Transcription format checkboxes
         self.transcribe_txt_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(options_frame, text="[✓] TXT",
+        ttk.Checkbutton(options_frame, text="TXT",
                         variable=self.transcribe_txt_var).pack(side="left", padx=(0, 10))
 
         self.transcribe_srt_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(options_frame, text="[✓] SRT",
+        ttk.Checkbutton(options_frame, text="SRT",
                         variable=self.transcribe_srt_var).pack(side="left", padx=(0, 10))
 
         # Transcribe button
-        self.transcribe_btn = ttk.Button(options_frame, text="[ T ]",
+        self.transcribe_btn = ttk.Button(options_frame, text="Transcribe",
                                          command=self.transcribe_files)
         self.transcribe_btn.pack(side="left", padx=(0, 10))
 
@@ -332,14 +314,14 @@ class ClearVoiceApp:
         if filepath not in self.selected_files:
             self.selected_files.append(filepath)
             # Add to treeview with checkbox
-            item_id = self.file_tree.insert("", "end", values=("[ ]", os.path.basename(filepath)))
+            item_id = self.file_tree.insert("", "end", values=(" ", os.path.basename(filepath)))
             self.checked_files.add(item_id)  # Default checked
             self._update_treeview_item(item_id)  # Update display
             self.log_status(f"+ {os.path.basename(filepath)}")
 
     def _update_treeview_item(self, item_id):
         """Update treeview item display based on checked state"""
-        checkbox = "[✓]" if item_id in self.checked_files else "[ ]"
+        checkbox = "✓" if item_id in self.checked_files else " "
         values = self.file_tree.item(item_id, "values")
         self.file_tree.item(item_id, values=(checkbox, values[1]))
 
@@ -571,7 +553,7 @@ class ClearVoiceApp:
             messagebox.showwarning("Kein Format", "Bitte TXT oder SRT auswählen!")
             return
 
-        self.transcribe_btn.config(state="disabled", text="[ … ]")
+        self.transcribe_btn.config(state="disabled", text="Transcribing...")
         thread = threading.Thread(target=self._transcribe_files_thread)
         thread.start()
 
@@ -723,7 +705,7 @@ class ClearVoiceApp:
     def _enable_transcribe_btn(self):
         """Re-enable transcribe button"""
         self.root.after(0, lambda: self.transcribe_btn.config(state="normal",
-                                                             text="[ T ]"))
+                                                             text="Transcribe"))
 
     def _enable_process_btn(self):
         """Re-enable process button"""
