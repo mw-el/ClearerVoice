@@ -30,3 +30,4 @@ torchvision
 huggingface-hub>=0.26.2
 gdown==5.2.0
 pydub
+ffmpeg-python>=0.2.1

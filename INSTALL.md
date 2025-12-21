@@ -73,6 +73,38 @@ If you prefer manual installation or the script doesn't work:
    update-desktop-database ~/.local/share/applications/
    ```
 
+## System Dependencies
+
+### Required
+
+- **ffmpeg**: Audio/video processing (installed via conda)
+- **ffmpeg binary**: System package for audio/video conversion
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install ffmpeg
+
+# Fedora/RHEL
+sudo dnf install ffmpeg
+
+# macOS
+brew install ffmpeg
+```
+
+### Optional (Recommended on Linux/GNOME)
+
+- **zenity**: For native file picker with Nautilus integration and bookmarks
+
+```bash
+# Ubuntu/Debian
+sudo apt-get install zenity
+
+# Fedora/RHEL
+sudo dnf install zenity
+
+# If not available, app falls back to tkinter file picker
+```
+
 ## Supported Python Versions
 
 - Python 3.8 (recommended)
