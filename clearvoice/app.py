@@ -403,8 +403,11 @@ class ClearVoiceApp:
                     cleaned_path = os.path.join(folder, f"{base_name}-cleaned-{timestamp}{output_ext}")
 
                     self.log_status("  Entrausche...")
+                    if self.apply_loudness_var.get():
+                        self.log_status("    (mit Lautstärke-Optimierung)")
                     enhanced_audio = self.myClearVoice(input_path=audio_to_process, online_write=False)
                     self.log_status(f"  Enhancement abgeschlossen")
+
                     self.myClearVoice.write(enhanced_audio, output_path=cleaned_path)
                     self.log_status(f"  → {os.path.basename(cleaned_path)}")
 
