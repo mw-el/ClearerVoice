@@ -464,41 +464,15 @@ class ClearVoiceApp:
         print("DEBUG: GUI initialisiert")
 
     def create_widgets(self):
-        # Main paned window (horizontal split)
-        self.paned = ttk.PanedWindow(self.root, orient="horizontal")
-        self.paned.pack(fill="both", expand=True, padx=5, pady=5)
-
-        # Left side: File Selection Panel
-        left_frame = ttk.LabelFrame(self.paned, text="Dateien auswählen")
-        self.paned.add(left_frame, weight=0)
-
-        # File picker button (takes minimal space)
-        btn_frame = ttk.Frame(left_frame)
-        btn_frame.pack(fill="both", expand=True, padx=5, pady=5)
-
-        ttk.Button(btn_frame, text="📁 Audiodateien hinzufügen...",
-                   command=self._open_file_picker).pack(fill="both", expand=True, pady=5)
-
-        # Instructions label
-        instructions_text = (
-            "Klicke auf 'Audiodateien hinzufügen...'\n"
-            "um eine oder mehrere Dateien\n"
-            "auszuwählen (MP3, WAV, Video, etc.).\n\n"
-            "Konfiguriere die Optionen rechts,\n"
-            "und klicke dann auf\n"
-            "'Dateien verarbeiten'."
-        )
-        ttk.Label(btn_frame, text=instructions_text, justify="left",
-                 font=('Segoe UI', int(10 * DPI_SCALE))).pack(fill="both", expand=True, padx=10, pady=10)
-
-        # Right side: Selected files and controls
-        right_frame = ttk.Frame(self.paned)
-        self.paned.add(right_frame, weight=1)
-
-        # Top: Options
-        options_frame = ttk.Frame(right_frame)
+        # Top: File selection and Options
+        options_frame = ttk.Frame(self.root)
         options_frame.pack(fill="x", padx=5, pady=5)
 
+        # File picker button (left side)
+        ttk.Button(options_frame, text="📁 Dateien hinzufügen...",
+                   command=self._open_file_picker).pack(side="left", padx=(0, 10))
+
+        # Checkboxes (middle)
         self.apply_sr_var = tk.BooleanVar(value=False)
         ttk.Checkbutton(options_frame, text="Super-Resolution (48kHz)",
                         variable=self.apply_sr_var).pack(side="left", padx=(0, 10))
@@ -509,10 +483,15 @@ class ClearVoiceApp:
 
         self.remux_video_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(options_frame, text="Video mit Audio remuxen",
-                        variable=self.remux_video_var).pack(side="left")
+                        variable=self.remux_video_var).pack(side="left", padx=(0, 10))
 
+        # Clear button (right side)
         ttk.Button(options_frame, text="Liste leeren",
                    command=self.clear_files).pack(side="right")
+
+        # Main content: Selected files and controls
+        right_frame = ttk.Frame(self.root)
+        right_frame.pack(fill="both", expand=True, padx=5, pady=5)
 
         # Selected files list
         list_frame = ttk.LabelFrame(right_frame, text="Ausgewählte Dateien")
