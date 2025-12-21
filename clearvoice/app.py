@@ -139,19 +139,15 @@ print(f"DEBUG: Font-Größe: {SCALED_FONT_SIZE}")
 # --------- File Selection Helper ---------
 def open_file_picker(initialdir=DEFAULT_INPUT_DIR):
     """Open file picker using Nautilus-based dialog with bookmarks support"""
-    # Build file filter patterns for zenity
-    # Format: --file-filter='Display Name | pattern1 pattern2 pattern3'
-    audio_patterns = ' '.join(f'*{ext}' for ext in AUDIO_EXTENSIONS)
-    video_patterns = ' '.join(f'*{ext}' for ext in VIDEO_EXTENSIONS)
-
+    # Simplified filters to avoid zenity crashes with too many patterns
     zenity_cmd = [
         'zenity', '--file-selection', '--multiple',
         f'--filename={initialdir}/',
         '--title=Audio- oder Videodatei auswählen',
-        f'--file-filter=Audio & Video | {audio_patterns} {video_patterns}',
-        f'--file-filter=Audio Dateien | {audio_patterns}',
-        f'--file-filter=Video Dateien | {video_patterns}',
-        '--file-filter=Alle Dateien | *'
+        '--file-filter=Audio & Video | *.wav *.mp3 *.flac *.ogg *.m4a *.aac *.mp4 *.mkv *.avi *.mov *.webm',
+        '--file-filter=Audio | *.wav *.mp3 *.flac *.ogg *.m4a *.aac',
+        '--file-filter=Video | *.mp4 *.mkv *.avi *.mov *.webm',
+        '--file-filter=All Files | *'
     ]
 
     try:
@@ -166,7 +162,7 @@ def open_file_picker(initialdir=DEFAULT_INPUT_DIR):
         if result.returncode == 0 and result.stdout:
             # zenity returns paths separated by |
             files = result.stdout.strip().split('|')
-            return tuple(f for f in files if f)  # Filter empty strings
+            return tuple(f for f in files if f and os.path.isfile(f))  # Validate files exist
         else:
             return ()
 
