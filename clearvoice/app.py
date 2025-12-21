@@ -476,6 +476,10 @@ class ClearVoiceApp:
         ttk.Checkbutton(options_frame, text="Super-Resolution (48kHz)",
                         variable=self.apply_sr_var).pack(side="left", padx=(0, 10))
 
+        self.apply_loudness_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(options_frame, text="Lautstärke-Optimierung",
+                        variable=self.apply_loudness_var).pack(side="left", padx=(0, 10))
+
         self.remux_video_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(options_frame, text="Video mit Audio remuxen",
                         variable=self.remux_video_var).pack(side="left")
@@ -582,7 +586,8 @@ class ClearVoiceApp:
                 try:
                     from clearvoice import ClearVoice
                     self.myClearVoice = ClearVoice(task='speech_enhancement',
-                                                    model_names=['MossFormer2_SE_48K'])
+                                                    model_names=['MossFormer2_SE_48K'],
+                                                    apply_loudness_processing_flag=self.apply_loudness_var.get())
                     self.log_status("Modell geladen!")
                 except Exception as e:
                     self.log_status(f"FEHLER: {e}")
