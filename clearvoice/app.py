@@ -506,10 +506,10 @@ class ClearVoiceApp:
                     )
 
                     # Build aTrainCore command
+                    # Note: positional argument must come first, language defaults to auto-detect if not specified
                     transcribe_cmd = (
                         f"aTrain_core transcribe \"{input_file}\" "
                         f"--model large-v3-turbo "
-                        f"--language auto-detect "
                         f"--device GPU "
                         f"--compute_type float16"
                     )
