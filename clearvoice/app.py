@@ -455,8 +455,20 @@ class ClearVoiceApp:
                     self._enable_process_btn()
                     return
 
-            total = len(self.selected_files)
-            for i, input_file in enumerate(self.selected_files, 1):
+            # Get checked files only
+            checked_items = [item for item in self.file_tree.get_children()
+                            if item in self.checked_files]
+            files_to_process = []
+            for item_id in checked_items:
+                values = self.file_tree.item(item_id, "values")
+                filename = values[1]
+                for f in self.selected_files:
+                    if os.path.basename(f) == filename:
+                        files_to_process.append(f)
+                        break
+
+            total = len(files_to_process)
+            for i, input_file in enumerate(files_to_process, 1):
                 self.log_status(f"\n[{i}/{total}] {os.path.basename(input_file)}")
 
                 try:
