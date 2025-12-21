@@ -79,14 +79,16 @@ def extract_audio_from_video(video_path, output_wav_path):
     """Extract audio from video file using ffmpeg"""
     import subprocess
     cmd = [
-        'ffmpeg', '-y', '-i', video_path,
+        'ffmpeg', '-y',
+        '-loglevel', 'error',
+        '-i', video_path,
         '-vn',  # No video
         '-acodec', 'pcm_s16le',  # WAV format
         '-ar', '48000',  # 48kHz sample rate (matches MossFormer2_SE_48K)
         '-ac', '1',  # Mono
         output_wav_path
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg error: {result.stderr}")
     return output_wav_path
@@ -103,6 +105,7 @@ def remux_video_with_audio(video_path, audio_path, output_path):
     import subprocess
     cmd = [
         'ffmpeg', '-y',
+        '-loglevel', 'error',
         '-i', video_path,      # Original video
         '-i', audio_path,      # New audio
         '-c:v', 'copy',        # Copy video stream (no re-encoding)
@@ -111,7 +114,7 @@ def remux_video_with_audio(video_path, audio_path, output_path):
         '-shortest',           # End when shortest stream ends
         output_path
     ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
+    result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='replace')
     if result.returncode != 0:
         raise RuntimeError(f"ffmpeg remux error: {result.stderr}")
     return output_path
