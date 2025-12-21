@@ -234,6 +234,11 @@ class ClearVoiceApp:
                                          command=self.transcribe_files)
         self.transcribe_btn.pack(side="left", padx=(0, 10))
 
+        # Process button (in toolbar)
+        self.process_btn = ttk.Button(options_frame, text="Optimieren",
+                                      command=self.process_files)
+        self.process_btn.pack(side="left", padx=(0, 10))
+
         # Main content: Selected files and controls
         right_frame = ttk.Frame(self.root)
         right_frame.pack(fill="both", expand=True, padx=5, pady=5)
@@ -272,15 +277,6 @@ class ClearVoiceApp:
         # Bind events for checkbox toggling
         self.file_tree.bind("<Button-1>", self._on_treeview_click)
         self.file_tree.bind("<Button-3>", self._on_treeview_right_click)
-
-        # Process button
-        process_frame = ttk.Frame(right_frame)
-        process_frame.pack(fill="x", padx=5, pady=5)
-
-        self.process_btn = tk.Button(process_frame, text="Dateien verarbeiten",
-                                      command=self.process_files, font=BOLD_FONT,
-                                      bg="#4CAF50", fg="white", padx=20, pady=5)
-        self.process_btn.pack(fill="x")
 
         # Status frame
         status_frame = ttk.LabelFrame(right_frame, text="Status")
@@ -434,7 +430,7 @@ class ClearVoiceApp:
             messagebox.showwarning("Keine Dateien", "Bitte erst Dateien hinzufügen!")
             return
 
-        self.process_btn.config(state="disabled", text="Verarbeite...")
+        self.process_btn.config(state="disabled", text="Optimiert...")
         thread = threading.Thread(target=self._process_files_thread)
         thread.start()
 
@@ -706,7 +702,7 @@ class ClearVoiceApp:
     def _enable_process_btn(self):
         """Re-enable process button"""
         self.root.after(0, lambda: self.process_btn.config(state="normal",
-                                                            text="Dateien verarbeiten"))
+                                                            text="Optimieren"))
 
 
 # --------- Main ---------
