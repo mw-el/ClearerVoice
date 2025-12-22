@@ -276,7 +276,7 @@ class ClearVoiceApp:
 
         # SR and Videomux vertical frame
         sr_video_frame = ttk.Frame(row1)
-        sr_video_frame.pack(side="left", padx=(0, 20))
+        sr_video_frame.pack(side="left", padx=(0, 20), pady=(10, 0))
 
         self.apply_sr_var = tk.BooleanVar(value=True)
         tk.Checkbutton(sr_video_frame, text="SR (48kHz)", font=DEFAULT_FONT,
@@ -288,7 +288,7 @@ class ClearVoiceApp:
 
         # Loudness preset selector with label
         loudness_frame = ttk.Frame(row1)
-        loudness_frame.pack(side="left", padx=(0, 20))
+        loudness_frame.pack(side="left", padx=(0, 20), pady=(10, 0))
 
         # Loudness label
         tk.Label(loudness_frame, text="Loudness Correction", font=DEFAULT_FONT).pack(anchor="w")
@@ -340,7 +340,7 @@ class ClearVoiceApp:
 
         # ===== ROW 2: Transcription format options (aligned below controls) =====
         row2 = ttk.Frame(toolbar)
-        row2.pack(fill="x")
+        row2.pack(fill="x", pady=(0, 0))
 
         # Add spacing to align with SR/Loudness/Mode above
         ttk.Frame(row2, width=28, height=1).pack(side="left", padx=(0, 10))  # File icon space
