@@ -439,6 +439,7 @@ def apply_adaptive_compressor(
     waveform: np.ndarray,
     sr: int = 48000,
     preset: str = 'normal',
+    strength: str = 'strong',
 ) -> Tuple[np.ndarray, Dict[str, float]]:
     """
     Apply adaptive dynamic range compression based on audio dynamics.
@@ -450,17 +451,25 @@ def apply_adaptive_compressor(
         waveform: Audio signal
         sr: Sample rate
         preset: 'aggressive' for Pass 1 or 'normal' for Pass 2
+        strength: 'moderate' for gentle processing or 'strong' for aggressive
+                 (Default: 'strong' for original audio)
 
     Returns:
         Tuple of:
         - Compressed waveform
         - Dictionary with compression statistics
     """
-    # Select preset
-    if preset == 'aggressive':
-        ratios = AdaptiveCompressionRatios.PassOne
-    else:
-        ratios = AdaptiveCompressionRatios.PassTwo
+    # Select strength and preset
+    if strength == 'moderate':
+        if preset == 'aggressive':
+            ratios = AdaptiveCompressionRatios.Moderate.PassOne
+        else:
+            ratios = AdaptiveCompressionRatios.Moderate.PassTwo
+    else:  # strong
+        if preset == 'aggressive':
+            ratios = AdaptiveCompressionRatios.Strong.PassOne
+        else:
+            ratios = AdaptiveCompressionRatios.Strong.PassTwo
 
     # Analyze dynamics
     dynamics = analyze_audio_dynamics(waveform, sr)
@@ -545,11 +554,12 @@ def apply_adaptive_compressor(
 def apply_dual_pass_loudness_processing(
     waveform: np.ndarray,
     sr: int = 48000,
+    strength: str = 'strong',
 ) -> Tuple[np.ndarray, Dict]:
     """
     Apply two-pass loudness processing for enhanced dynamic control.
 
-    Pass 1 (Aggressive): Lifts quiet segments significantly using high compression ratios
+    Pass 1 (Aggressive): Lifts quiet segments using high compression ratios
     Pass 2 (Normal): Smooths the result with standard compression for natural sound
 
     This approach rescues whispered or quiet passages while maintaining
@@ -558,6 +568,8 @@ def apply_dual_pass_loudness_processing(
     Args:
         waveform: Audio signal
         sr: Sample rate
+        strength: 'moderate' for already-processed audio or 'strong' for original audio
+                 (Default: 'strong')
 
     Returns:
         Tuple of:
@@ -565,14 +577,14 @@ def apply_dual_pass_loudness_processing(
         - Dictionary with all processing statistics
     """
     output = waveform.copy()
-    stats = {'passes': {}}
+    stats = {'passes': {}, 'strength': strength}
 
     # Pass 1: Aggressive adaptive compression
-    output, pass1_stats = apply_adaptive_compressor(output, sr, preset='aggressive')
+    output, pass1_stats = apply_adaptive_compressor(output, sr, preset='aggressive', strength=strength)
     stats['passes']['pass1_aggressive'] = pass1_stats
 
     # Pass 2: Normal adaptive compression
-    output, pass2_stats = apply_adaptive_compressor(output, sr, preset='normal')
+    output, pass2_stats = apply_adaptive_compressor(output, sr, preset='normal', strength=strength)
     stats['passes']['pass2_normal'] = pass2_stats
 
     # Add overall stats
@@ -596,7 +608,8 @@ def log_processing_stats(stats: Dict) -> str:
 
     # Handle new dual-pass stats
     if 'passes' in stats:
-        lines.append("Dual-Pass Adaptive Compression:")
+        strength = stats.get('strength', 'strong').upper()
+        lines.append(f"Dual-Pass Adaptive Compression ({strength}):")
         if 'pass1_aggressive' in stats['passes']:
             p1 = stats['passes']['pass1_aggressive']
             lines.append(f"  Pass 1 (Aggressive):")

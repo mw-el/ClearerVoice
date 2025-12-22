@@ -9,7 +9,7 @@ class ClearVoice:
     """ The main class inferface to the end users for performing speech processing
         this class provides the desired model to perform the given task
     """
-    def __init__(self, task, model_names, apply_loudness_processing_flag=False):
+    def __init__(self, task, model_names, apply_loudness_processing_flag=False, loudness_strength='strong'):
         """ Load the desired models for the specified task. Perform all the given models and return all results.
 
         Parameters:
@@ -30,6 +30,9 @@ class ClearVoice:
             If True, applies loudness normalization and dynamic range compression
             after speech enhancement for more consistent podcast audio.
             If False, only applies speech enhancement.
+        loudness_strength: str
+            'strong' for original audio (default, aggressive rescue of quiet segments)
+            'moderate' for already-processed audio (gentle enhancement)
 
         Returns:
         --------
@@ -38,6 +41,7 @@ class ClearVoice:
         self.network_wrapper = network_wrapper()
         self.models = []
         self.apply_loudness_processing = apply_loudness_processing_flag
+        self.loudness_strength = loudness_strength
         for model_name in model_names:
             model = self.network_wrapper(task, model_name)
             self.models += [model]
@@ -69,8 +73,12 @@ class ClearVoice:
         Apply dual-pass loudness processing to model results.
 
         Uses adaptive compression with two passes:
-        - Pass 1: Aggressive ratios (10:1, 5:1, 2:1) to lift quiet segments
-        - Pass 2: Normal ratios (4:1, 2:1, 1:1) to smooth and naturalize
+        - Pass 1: Lifts quiet segments using configurable ratios
+        - Pass 2: Smooths and naturalizes the output
+
+        Strength modes (set via loudness_strength parameter):
+        - 'strong': Original audio (10:1, 5:1, 2:1 → 4:1, 2:1, 1:1)
+        - 'moderate': Already-processed audio (7:1, 4:1, 2:1 → 3:1, 2:1, 1:1)
 
         Handles both single waveforms and lists of waveforms (e.g., from speech separation).
 
@@ -85,13 +93,17 @@ class ClearVoice:
             # Multiple outputs (e.g., speech separation with 2 speakers)
             processed_results = []
             for waveform in results:
-                processed, stats = apply_dual_pass_loudness_processing(waveform, sr=sr)
+                processed, stats = apply_dual_pass_loudness_processing(
+                    waveform, sr=sr, strength=self.loudness_strength
+                )
                 processed_results.append(processed)
                 print(log_processing_stats(stats))
             return processed_results
         else:
             # Single waveform output
-            processed, stats = apply_dual_pass_loudness_processing(results, sr=sr)
+            processed, stats = apply_dual_pass_loudness_processing(
+                results, sr=sr, strength=self.loudness_strength
+            )
             print(log_processing_stats(stats))
             return processed
 
