@@ -249,40 +249,40 @@ class ClearVoiceApp:
         row1.pack(fill="x", pady=(0, 5))
 
         # File picker button (left side)
-        ttk.Button(row1, text="[ + ] Dateien hinzufügen",
-                   command=self._open_file_picker).pack(side="left", padx=(0, 10))
+        tk.Button(row1, text="[ + ] Dateien hinzufügen", font=DEFAULT_FONT,
+                  command=self._open_file_picker).pack(side="left", padx=(0, 10))
 
         # Enhancement checkboxes (SR, Loudness, VideMux)
         self.apply_sr_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(row1, text="SR (48kHz)",
-                        variable=self.apply_sr_var).pack(side="left", padx=(0, 10))
+        tk.Checkbutton(row1, text="SR (48kHz)", font=DEFAULT_FONT,
+                       variable=self.apply_sr_var).pack(side="left", padx=(0, 10))
 
         self.apply_loudness_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(row1, text="Lautstärke",
-                        variable=self.apply_loudness_var).pack(side="left", padx=(0, 10))
+        tk.Checkbutton(row1, text="Lautstärke", font=DEFAULT_FONT,
+                       variable=self.apply_loudness_var).pack(side="left", padx=(0, 10))
 
         self.remux_video_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(row1, text="Videomux",
-                        variable=self.remux_video_var).pack(side="left", padx=(0, 20))
+        tk.Checkbutton(row1, text="Videomux", font=DEFAULT_FONT,
+                       variable=self.remux_video_var).pack(side="left", padx=(0, 20))
 
         # Process button
-        self.process_btn = ttk.Button(row1, text="Optimieren",
-                                      command=self.process_files)
+        self.process_btn = tk.Button(row1, text="Optimieren", font=DEFAULT_FONT,
+                                     command=self.process_files)
         self.process_btn.pack(side="left", padx=(0, 50))
 
         # Transcribe button (right side with spacing)
-        self.transcribe_btn = ttk.Button(row1, text="Transcribe",
-                                         command=self.transcribe_files)
+        self.transcribe_btn = tk.Button(row1, text="Transcribe", font=DEFAULT_FONT,
+                                        command=self.transcribe_files)
         self.transcribe_btn.pack(side="left", padx=(0, 10))
 
         # Transcription format checkboxes (TXT, SRT)
         self.transcribe_txt_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(row1, text="TXT",
-                        variable=self.transcribe_txt_var).pack(side="left", padx=(0, 5))
+        tk.Checkbutton(row1, text="TXT", font=DEFAULT_FONT,
+                       variable=self.transcribe_txt_var).pack(side="left", padx=(0, 5))
 
         self.transcribe_srt_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(row1, text="SRT",
-                        variable=self.transcribe_srt_var).pack(side="left", padx=(0, 10))
+        tk.Checkbutton(row1, text="SRT", font=DEFAULT_FONT,
+                       variable=self.transcribe_srt_var).pack(side="left", padx=(0, 10))
 
         # ===== ROW 2: Loudness strength options =====
         row2 = ttk.Frame(toolbar)
