@@ -471,13 +471,18 @@ def apply_adaptive_compressor(
         else:
             ratios = AdaptiveCompressionRatios.Strong.PassTwo
 
+    # Ensure waveform is 1D for processing BEFORE analyzing dynamics
+    output = waveform.copy()
+    if output.ndim > 1:
+        output = output.flatten()
+
     # Analyze dynamics
-    dynamics = analyze_audio_dynamics(waveform, sr)
+    dynamics = analyze_audio_dynamics(output, sr)
     categories = dynamics['categories']
     window_size = dynamics['window_size_samples']
 
     # Create ratio map for each sample
-    num_samples = len(waveform)
+    num_samples = len(output)
     ratio_map = np.ones(num_samples)
 
     for i, category in enumerate(categories):
@@ -492,11 +497,6 @@ def apply_adaptive_compressor(
             ratio_map[start:end] = ratios.LOUD_RATIO
 
     # Apply compression with variable ratios
-    output = waveform.copy()
-
-    # Ensure waveform is 1D for processing
-    if output.ndim > 1:
-        output = output.flatten()
 
     waveform_db = 20 * np.log10(np.abs(output) + 1e-10)
 
