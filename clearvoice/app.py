@@ -204,6 +204,12 @@ class ClearVoiceApp:
         self.myClearVoice = None
         self.myClearVoice_SR = None
 
+        # GPU queue management - prevent concurrent GPU operations
+        self.operation_running = None  # 'optimize' or 'transcribe' or None
+        self.optimize_queued = False   # Flag if optimize was queued while transcribe running
+        self.transcribe_queued = False # Flag if transcribe was queued while optimize running
+        self.operation_lock = threading.Lock()  # Lock for thread-safe state management
+
         self.create_widgets()
         print("DEBUG: GUI initialisiert")
 
@@ -409,8 +415,20 @@ class ClearVoiceApp:
             messagebox.showwarning("Keine Dateien", "Bitte erst Dateien hinzufügen!")
             return
 
+        with self.operation_lock:
+            # If transcribe is currently running, queue optimize instead
+            if self.operation_running == 'transcribe':
+                self.optimize_queued = True
+                self.log_status("→ Optimierung wird nach Transkription gestartet...")
+                return
+
+            # Start optimize immediately
+            self.operation_running = 'optimize'
+            self.optimize_queued = False
+            self.transcribe_queued = False
+
         self.process_btn.config(state="disabled", text="Optimiert...")
-        thread = threading.Thread(target=self._process_files_thread, daemon=True)
+        thread = threading.Thread(target=self._process_files_thread, daemon=False)
         thread.start()
 
     def _process_files_thread(self):
@@ -526,7 +544,19 @@ class ClearVoiceApp:
             self.log_status(traceback.format_exc())
 
         finally:
-            self._enable_process_btn()
+            # Check if transcribe was queued while we were processing
+            with self.operation_lock:
+                if self.transcribe_queued:
+                    self.transcribe_queued = False
+                    self.operation_running = None  # Clear optimize state
+                    self._enable_process_btn()
+                    # Automatically start transcription
+                    self.log_status("\n" + "=" * 40)
+                    self.log_status("→ Starte automatisch Transkription...")
+                    self.root.after(100, self._start_transcribe_thread)
+                else:
+                    self.operation_running = None  # Clear optimize state
+                    self._enable_process_btn()
 
     def transcribe_files(self):
         """Transcribe all selected files using aTrainCore"""
@@ -539,8 +569,26 @@ class ClearVoiceApp:
             messagebox.showwarning("Kein Format", "Bitte TXT oder SRT auswählen!")
             return
 
+        with self.operation_lock:
+            # If optimize is currently running, queue transcribe instead
+            if self.operation_running == 'optimize':
+                self.transcribe_queued = True
+                self.log_status("→ Transkription wird nach Optimierung gestartet...")
+                return
+
+            # Start transcribe immediately
+            self.operation_running = 'transcribe'
+            self.optimize_queued = False
+            self.transcribe_queued = False
+
         self.transcribe_btn.config(state="disabled", text="Transcribing...")
-        thread = threading.Thread(target=self._transcribe_files_thread, daemon=True)
+        thread = threading.Thread(target=self._transcribe_files_thread, daemon=False)
+        thread.start()
+
+    def _start_transcribe_thread(self):
+        """Helper to start transcription from auto-trigger (already has lock released)"""
+        self.transcribe_btn.config(state="disabled", text="Transcribing...")
+        thread = threading.Thread(target=self._transcribe_files_thread, daemon=False)
         thread.start()
 
     def _transcribe_files_thread(self):
@@ -677,7 +725,19 @@ class ClearVoiceApp:
             self.log_status(traceback.format_exc())
 
         finally:
-            self._enable_transcribe_btn()
+            # Check if optimize was queued while we were transcribing
+            with self.operation_lock:
+                if self.optimize_queued:
+                    self.optimize_queued = False
+                    self.operation_running = None  # Clear transcribe state
+                    self._enable_transcribe_btn()
+                    # Automatically start optimization
+                    self.log_status("\n" + "=" * 40)
+                    self.log_status("→ Starte automatisch Optimierung...")
+                    self.root.after(100, self._start_optimize_thread)
+                else:
+                    self.operation_running = None  # Clear transcribe state
+                    self._enable_transcribe_btn()
 
     def _find_transcription_files(self, transcriptions_dir, after_time=None):
         """Find newly created transcription files (optionally filtered by time)"""
@@ -726,6 +786,12 @@ class ClearVoiceApp:
         except Exception as e:
             self.log_status(f"  DEBUG: Fehler beim Suchen des neuesten Ordners: {e}")
             return []
+
+    def _start_optimize_thread(self):
+        """Helper to start optimization from auto-trigger (already has lock released)"""
+        self.process_btn.config(state="disabled", text="Optimiert...")
+        thread = threading.Thread(target=self._process_files_thread, daemon=False)
+        thread.start()
 
     def _enable_transcribe_btn(self):
         """Re-enable transcribe button"""
