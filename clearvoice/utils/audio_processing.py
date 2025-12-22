@@ -493,18 +493,23 @@ def apply_adaptive_compressor(
 
     # Apply compression with variable ratios
     output = waveform.copy()
-    waveform_db = 20 * np.log10(np.abs(waveform) + 1e-10)
+
+    # Ensure waveform is 1D for processing
+    if output.ndim > 1:
+        output = output.flatten()
+
+    waveform_db = 20 * np.log10(np.abs(output) + 1e-10)
 
     attack_samples = int(sr * ratios.ATTACK_MS / 1000.0)
     release_samples = int(sr * ratios.RELEASE_MS / 1000.0)
     threshold_db = ratios.THRESHOLD_DB
     knee_width = ratios.KNEE_WIDTH_DB
 
-    gain_envelope = np.ones_like(waveform)
+    gain_envelope = np.ones_like(output)
 
-    for i in range(len(waveform)):
-        level_db = waveform_db[i]
-        current_ratio = ratio_map[i]
+    for i in range(len(output)):
+        level_db = float(waveform_db[i])
+        current_ratio = float(ratio_map[i])
 
         if level_db > threshold_db:
             excess_db = level_db - threshold_db
@@ -537,7 +542,7 @@ def apply_adaptive_compressor(
         gain_envelope[i] = current_gain_db
 
     gain_linear = 10 ** (gain_envelope / 20.0)
-    output = waveform * gain_linear
+    output = output * gain_linear
 
     stats = {
         'preset': preset,
