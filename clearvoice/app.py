@@ -309,16 +309,8 @@ class ClearVoiceApp:
         right_frame.pack(fill="both", expand=True, padx=5, pady=5)
 
         # Selected files list
-        list_header_frame = ttk.Frame(right_frame)
-        list_header_frame.pack(fill="x", padx=5, pady=(5, 0))
-
-        ttk.Label(list_header_frame, text="Ausgewählte Dateien", font=HEADING_FONT).pack(side="left")
-
-        list_frame = ttk.LabelFrame(right_frame, text="")
-        list_frame.pack(fill="both", expand=True, padx=5, pady=5)
-
-        list_container = ttk.Frame(list_frame)
-        list_container.pack(fill="both", expand=True)
+        list_container = ttk.Frame(right_frame)
+        list_container.pack(fill="both", expand=True, padx=5, pady=(0, 5))
 
         scrollbar = ttk.Scrollbar(list_container)
         scrollbar.pack(side="right", fill="y")
