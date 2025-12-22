@@ -555,12 +555,12 @@ class ClearVoiceApp:
                 self.log_status(f"\n[{idx}/{total}] Transkribiere: {filename}")
 
                 try:
+                    # Record time BEFORE transcription (before any operations)
+                    before_time = datetime.datetime.now()
+
                     # Get output folder and base name
                     output_folder = os.path.dirname(input_file)
                     base_name = os.path.splitext(os.path.basename(input_file))[0]
-
-                    # Record time before transcription
-                    before_time = datetime.datetime.now()
 
                     # Check if aTrain environment is available
                     conda_cmd = (
@@ -608,8 +608,15 @@ class ClearVoiceApp:
                         transcriptions_dir = output_folder
                         self.log_status(f"  Versuche stattdessen: {transcriptions_dir}")
 
-                    # Find newly created transcription files (only newer than before_time)
+                    # Find newly created transcription files
+                    # First try to find files newer than before_time, fallback to latest folder
                     transcript_files = self._find_transcription_files(transcriptions_dir, before_time)
+
+                    # If no files found with time filter, try the newest folder
+                    if not transcript_files:
+                        self.log_status(f"  DEBUG: Keine neuen Dateien gefunden, versuche neuesten Ordner...")
+                        transcript_files = self._find_latest_transcription_files(transcriptions_dir)
+
                     self.log_status(f"  DEBUG: Gefundene Dateien: {len(transcript_files)}")
 
                     if not transcript_files:
@@ -691,6 +698,34 @@ class ClearVoiceApp:
                         files.append(filepath)
 
         return files
+
+    def _find_latest_transcription_files(self, transcriptions_dir):
+        """Find transcription files in the most recently created folder"""
+        if not os.path.exists(transcriptions_dir):
+            return []
+
+        # Find the newest folder
+        try:
+            folders = [
+                os.path.join(transcriptions_dir, d)
+                for d in os.listdir(transcriptions_dir)
+                if os.path.isdir(os.path.join(transcriptions_dir, d))
+            ]
+            if not folders:
+                return []
+
+            newest_folder = max(folders, key=os.path.getmtime)
+
+            # Find transcription files in this folder
+            files = []
+            for filename in os.listdir(newest_folder):
+                if filename in ("transcription.txt", "transcription.srt"):
+                    files.append(os.path.join(newest_folder, filename))
+
+            return files
+        except Exception as e:
+            self.log_status(f"  DEBUG: Fehler beim Suchen des neuesten Ordners: {e}")
+            return []
 
     def _enable_transcribe_btn(self):
         """Re-enable transcribe button"""
