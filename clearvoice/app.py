@@ -218,6 +218,14 @@ class ClearVoiceApp:
         preset = self.loudness_preset_var.get()
         self.log_status(f"Loudness Preset: {preset.capitalize()}")
 
+    def _get_processing_mode(self):
+        """Get processing mode from display text"""
+        display_text = self.processing_mode_var.get()
+        for key, value in self.mode_display_map.items():
+            if value == display_text:
+                return key
+        return 'full'  # Default fallback
+
     def _setup_fonts(self):
         """Set up fonts with Ubuntu preference and DPI scaling"""
         global DEFAULT_FONT, BOLD_FONT, HEADING_FONT, MONO_FONT
@@ -276,7 +284,22 @@ class ClearVoiceApp:
 
         self.remux_video_var = tk.BooleanVar(value=True)
         tk.Checkbutton(row1, text="Videomux", font=DEFAULT_FONT,
-                       variable=self.remux_video_var).pack(side="left", padx=(0, 20))
+                       variable=self.remux_video_var).pack(side="left", padx=(0, 10))
+
+        # Processing mode selector
+        tk.Label(row1, text="Mode:", font=DEFAULT_FONT).pack(side="left", padx=(0, 5))
+        self.processing_mode_var = tk.StringVar(value='full')
+        self.mode_display_map = {
+            'full': 'Vollständig (ClearVoice + SR + Loudness)',
+            'loudness_only': 'Nur Loudness',
+            'clearvoice_only': 'Nur ClearVoice (+ SR, keine Loudness)'
+        }
+        mode_dropdown = ttk.Combobox(row1, textvariable=self.processing_mode_var,
+                                      values=list(self.mode_display_map.values()),
+                                      state='readonly', width=40, font=DEFAULT_FONT)
+        mode_dropdown.pack(side="left", padx=(0, 20))
+        # Set friendly display names
+        mode_dropdown.set(self.mode_display_map['full'])
 
         # Process button
         self.process_btn = tk.Button(row1, text="Optimieren", font=DEFAULT_FONT,
@@ -435,23 +458,29 @@ class ClearVoiceApp:
             self.log_status("=" * 40)
             self.log_status("Starte Verarbeitung...")
 
-            # Load ClearVoice WITHOUT loudness processing (will apply after SR)
-            self.log_status("Lade ClearVoice Modell...")
-            try:
-                from clearvoice import ClearVoice
-                loudness_preset = self.loudness_preset_var.get()
-                self.log_status(f"  Loudness Preset: {loudness_preset.capitalize()} (wird nach SR angewendet)")
-                # Load ClearVoice WITHOUT loudness - we apply it after SR
-                self.myClearVoice = ClearVoice(task='speech_enhancement',
-                                                model_names=['MossFormer2_SE_48K'],
-                                                apply_loudness_processing_flag=False)
-                self.log_status("Modell geladen!")
-            except Exception as e:
-                self.log_status(f"FEHLER: {e}")
-                import traceback
-                self.log_status(traceback.format_exc())
-                self._enable_process_btn()
-                return
+            # Get processing mode
+            mode = self._get_processing_mode()
+            self.log_status(f"Modus: {self.mode_display_map[mode]}")
+
+            # Load ClearVoice if needed (full or clearvoice_only modes)
+            if mode in ['full', 'clearvoice_only']:
+                self.log_status("Lade ClearVoice Modell...")
+                try:
+                    from clearvoice import ClearVoice
+                    loudness_preset = self.loudness_preset_var.get()
+                    if mode == 'full':
+                        self.log_status(f"  Loudness Preset: {loudness_preset.capitalize()} (wird nach SR angewendet)")
+                    # Load ClearVoice WITHOUT loudness - we apply it after SR (if full mode)
+                    self.myClearVoice = ClearVoice(task='speech_enhancement',
+                                                    model_names=['MossFormer2_SE_48K'],
+                                                    apply_loudness_processing_flag=False)
+                    self.log_status("Modell geladen!")
+                except Exception as e:
+                    self.log_status(f"FEHLER: {e}")
+                    import traceback
+                    self.log_status(traceback.format_exc())
+                    self._enable_process_btn()
+                    return
 
             # Process all selected files
             total = len(self.selected_files)
@@ -462,78 +491,109 @@ class ClearVoiceApp:
                     folder = os.path.dirname(input_file)
                     base_name, ext = os.path.splitext(os.path.basename(input_file))
                     timestamp = datetime.datetime.now().strftime("%Y%m%d%H%M%S")
-
-                    # Check if it's a video file - extract audio first
-                    temp_audio = None
                     is_video = is_video_file(input_file)
-                    if is_video:
-                        self.log_status("  Extrahiere Audio aus Video...")
-                        temp_audio = os.path.join(folder, f"{base_name}-temp-{timestamp}.wav")
-                        extract_audio_from_video(input_file, temp_audio)
-                        audio_to_process = temp_audio
-                        output_ext = ".wav"  # Output as WAV for audio
+
+                    # Determine which file to process based on mode
+                    if mode == 'loudness_only':
+                        # LOUDNESS ONLY MODE: Apply loudness to input file directly
+                        final_audio = input_file
+                        self.log_status(f"  Wende Loudness an...")
                     else:
-                        audio_to_process = input_file
-                        output_ext = ext
+                        # FULL or CLEARVOICE_ONLY MODE: Run ClearVoice pipeline
 
-                    cleaned_path = os.path.join(folder, f"{base_name}-cleaned-{timestamp}{output_ext}")
+                        # Check if it's a video file - extract audio first
+                        temp_audio = None
+                        if is_video:
+                            self.log_status("  Extrahiere Audio aus Video...")
+                            temp_audio = os.path.join(folder, f"{base_name}-temp-{timestamp}.wav")
+                            extract_audio_from_video(input_file, temp_audio)
+                            audio_to_process = temp_audio
+                            output_ext = ".wav"  # Output as WAV for audio
+                        else:
+                            audio_to_process = input_file
+                            output_ext = ext
 
-                    self.log_status("  Entrausche...")
+                        cleaned_path = os.path.join(folder, f"{base_name}-cleaned-{timestamp}{output_ext}")
 
-                    enhanced_audio = self.myClearVoice(input_path=audio_to_process, online_write=False)
-                    self.log_status(f"  Enhancement abgeschlossen")
+                        self.log_status("  Entrausche...")
 
-                    self.myClearVoice.write(enhanced_audio, output_path=cleaned_path)
-                    self.log_status(f"  → {os.path.basename(cleaned_path)}")
+                        enhanced_audio = self.myClearVoice(input_path=audio_to_process, online_write=False)
+                        self.log_status(f"  Enhancement abgeschlossen")
 
-                    # Clean up temp file if we extracted from video
-                    if temp_audio and os.path.exists(temp_audio):
-                        os.remove(temp_audio)
+                        self.myClearVoice.write(enhanced_audio, output_path=cleaned_path)
+                        self.log_status(f"  → {os.path.basename(cleaned_path)}")
 
-                    # Final audio path (might be SR output later)
-                    final_audio = cleaned_path
+                        # Clean up temp file if we extracted from video
+                        if temp_audio and os.path.exists(temp_audio):
+                            os.remove(temp_audio)
 
-                    if self.apply_sr_var.get():
-                        if self.myClearVoice_SR is None:
-                            self.log_status("  Lade SR-Modell...")
-                            from clearvoice import ClearVoice
-                            self.myClearVoice_SR = ClearVoice(task='speech_super_resolution',
-                                                               model_names=['MossFormer2_SR_48K'])
-
-                        sr_output = os.path.join(folder, f"{base_name}-cleaned-sr-{timestamp}{output_ext}")
-                        self.log_status("  Super-Resolution...")
-                        sr_audio = self.myClearVoice_SR(input_path=cleaned_path, online_write=False)
-                        self.myClearVoice_SR.write(sr_audio, output_path=sr_output)
-                        self.log_status(f"  → {os.path.basename(sr_output)}")
-                        final_audio = sr_output
-                    else:
-                        # No SR - use cleaned audio as final
+                        # Final audio path (might be SR output later)
                         final_audio = cleaned_path
 
-                    # Apply loudness processing AFTER SR (or after cleaning if no SR)
-                    loudness_preset = self.loudness_preset_var.get()
-                    self.log_status(f"  Wende Loudness ({loudness_preset}) an...")
-                    try:
-                        import numpy as np
-                        from clearvoice.utils.audio_processing import apply_dual_pass_loudness_processing, log_processing_stats
-                        import soundfile as sf
+                        if self.apply_sr_var.get():
+                            if self.myClearVoice_SR is None:
+                                self.log_status("  Lade SR-Modell...")
+                                from clearvoice import ClearVoice
+                                self.myClearVoice_SR = ClearVoice(task='speech_super_resolution',
+                                                                   model_names=['MossFormer2_SR_48K'])
 
-                        # Read the audio file
-                        audio_data, sr_value = sf.read(final_audio)
+                            sr_output = os.path.join(folder, f"{base_name}-cleaned-sr-{timestamp}{output_ext}")
+                            self.log_status("  Super-Resolution...")
+                            sr_audio = self.myClearVoice_SR(input_path=cleaned_path, online_write=False)
+                            self.myClearVoice_SR.write(sr_audio, output_path=sr_output)
+                            self.log_status(f"  → {os.path.basename(sr_output)}")
+                            final_audio = sr_output
 
-                        # Apply loudness processing with selected preset
-                        processed_audio, stats = apply_dual_pass_loudness_processing(
-                            audio_data, sr=sr_value, strength=loudness_preset
-                        )
+                    # Apply loudness processing if in FULL mode
+                    if mode == 'full':
+                        loudness_preset = self.loudness_preset_var.get()
+                        self.log_status(f"  Wende Loudness ({loudness_preset}) an...")
+                        try:
+                            import numpy as np
+                            from clearvoice.utils.audio_processing import apply_dual_pass_loudness_processing, log_processing_stats
+                            import soundfile as sf
 
-                        # Write back to the same file (overwrite)
-                        sf.write(final_audio, processed_audio, sr_value)
-                        self.log_status(f"    Loudness angewendet")
-                        self.log_status(log_processing_stats(stats))
-                    except Exception as loudness_error:
-                        self.log_status(f"  FEHLER bei Loudness: {loudness_error}")
-                        import traceback
-                        self.log_status(traceback.format_exc())
+                            # Read the audio file
+                            audio_data, sr_value = sf.read(final_audio)
+
+                            # Apply loudness processing with selected preset
+                            processed_audio, stats = apply_dual_pass_loudness_processing(
+                                audio_data, sr=sr_value, strength=loudness_preset
+                            )
+
+                            # Write back to the same file (overwrite)
+                            sf.write(final_audio, processed_audio, sr_value)
+                            self.log_status(f"    Loudness angewendet")
+                            self.log_status(log_processing_stats(stats))
+                        except Exception as loudness_error:
+                            self.log_status(f"  FEHLER bei Loudness: {loudness_error}")
+                            import traceback
+                            self.log_status(traceback.format_exc())
+                    elif mode == 'loudness_only':
+                        # LOUDNESS ONLY: Apply loudness to the input file directly
+                        loudness_preset = self.loudness_preset_var.get()
+                        try:
+                            import numpy as np
+                            from clearvoice.utils.audio_processing import apply_dual_pass_loudness_processing, log_processing_stats
+                            import soundfile as sf
+
+                            # Read the audio file
+                            audio_data, sr_value = sf.read(final_audio)
+
+                            # Apply loudness processing with selected preset
+                            processed_audio, stats = apply_dual_pass_loudness_processing(
+                                audio_data, sr=sr_value, strength=loudness_preset
+                            )
+
+                            # Create output file with loudness-processed audio
+                            loudness_path = os.path.join(folder, f"{base_name}-loudness-{timestamp}{ext}")
+                            sf.write(loudness_path, processed_audio, sr_value)
+                            self.log_status(f"    → {os.path.basename(loudness_path)}")
+                            self.log_status(log_processing_stats(stats))
+                        except Exception as loudness_error:
+                            self.log_status(f"  FEHLER bei Loudness: {loudness_error}")
+                            import traceback
+                            self.log_status(traceback.format_exc())
 
                     # Remux video with cleaned audio if requested
                     if is_video and self.remux_video_var.get():
