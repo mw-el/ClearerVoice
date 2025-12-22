@@ -207,15 +207,14 @@ class ClearVoiceApp:
         self.create_widgets()
         print("DEBUG: GUI initialisiert")
 
-    def _toggle_loudness_strength(self, strength):
-        """Toggle loudness strength and ensure only one is selected"""
-        self.loudness_strength_var.set(strength)
+    def _toggle_loudness(self, strength):
+        """Toggle loudness strength checkboxes - mutually exclusive"""
         if strength == 'moderate':
-            self.soft_button.select()
-            self.stark_button.deselect()
+            self.loudness_moderate_var.set(True)
+            self.loudness_strong_var.set(False)
         else:  # strong
-            self.stark_button.select()
-            self.soft_button.deselect()
+            self.loudness_strong_var.set(True)
+            self.loudness_moderate_var.set(False)
 
     def _setup_fonts(self):
         """Set up fonts with Ubuntu preference and DPI scaling"""
@@ -257,9 +256,19 @@ class ClearVoiceApp:
         tk.Checkbutton(row1, text="SR (48kHz)", font=DEFAULT_FONT,
                        variable=self.apply_sr_var).pack(side="left", padx=(0, 10))
 
-        self.apply_loudness_var = tk.BooleanVar(value=True)
-        tk.Checkbutton(row1, text="Lautstärke", font=DEFAULT_FONT,
-                       variable=self.apply_loudness_var).pack(side="left", padx=(0, 10))
+        # Loudness checkboxes (vertically stacked, mutually exclusive)
+        loudness_frame = ttk.Frame(row1)
+        loudness_frame.pack(side="left", padx=(0, 10))
+
+        self.loudness_moderate_var = tk.BooleanVar(value=False)
+        self.loudness_strong_var = tk.BooleanVar(value=True)
+
+        tk.Checkbutton(loudness_frame, text="Loudness+", font=DEFAULT_FONT,
+                       variable=self.loudness_moderate_var,
+                       command=lambda: self._toggle_loudness('moderate')).pack(anchor="w")
+        tk.Checkbutton(loudness_frame, text="Loudness++", font=DEFAULT_FONT,
+                       variable=self.loudness_strong_var,
+                       command=lambda: self._toggle_loudness('strong')).pack(anchor="w")
 
         self.remux_video_var = tk.BooleanVar(value=True)
         tk.Checkbutton(row1, text="Videomux", font=DEFAULT_FONT,
@@ -284,25 +293,6 @@ class ClearVoiceApp:
         tk.Checkbutton(row1, text="SRT", font=DEFAULT_FONT,
                        variable=self.transcribe_srt_var).pack(side="left", padx=(0, 10))
 
-        # ===== ROW 2: Loudness strength options =====
-        row2 = ttk.Frame(toolbar)
-        row2.pack(fill="x")
-
-        # Loudness strength label and toggle buttons (using tk.Checkbutton but only one active at a time)
-        ttk.Label(row2, text="Lautstärke-Stärke:", font=DEFAULT_FONT).pack(side="left", padx=(0, 10))
-
-        self.loudness_strength_var = tk.StringVar(value='strong')
-        self.soft_button = tk.Checkbutton(row2, text="Soft", font=DEFAULT_FONT,
-                                          command=lambda: self._toggle_loudness_strength('moderate'))
-        self.soft_button.pack(side="left", padx=(0, 5))
-
-        self.stark_button = tk.Checkbutton(row2, text="Stark", font=DEFAULT_FONT,
-                                           command=lambda: self._toggle_loudness_strength('strong'),
-                                           state='normal')
-        self.stark_button.pack(side="left", padx=(0, 20))
-
-        # Set initial state
-        self.stark_button.select()  # Stark is selected by default
 
         # Main content: Selected files and controls
         right_frame = ttk.Frame(self.root)
@@ -433,8 +423,8 @@ class ClearVoiceApp:
             self.log_status("Lade ClearVoice Modell...")
             try:
                 from clearvoice import ClearVoice
-                loudness_enabled = self.apply_loudness_var.get()
-                loudness_strength = self.loudness_strength_var.get()
+                loudness_enabled = self.loudness_moderate_var.get() or self.loudness_strong_var.get()
+                loudness_strength = 'moderate' if self.loudness_moderate_var.get() else 'strong'
                 self.log_status(f"  Loudness-Optimierung: {'aktiviert' if loudness_enabled else 'deaktiviert'}")
                 if loudness_enabled:
                     self.log_status(f"  Loudness-Stärke: {loudness_strength}")
