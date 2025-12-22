@@ -280,11 +280,16 @@ class ClearVoiceApp:
             tk.Button(toolbar, text="📁", font=DEFAULT_FONT,
                       command=self._open_file_picker, width=3).grid(row=0, column=0, padx=(0, 10), sticky="w")
 
-        # SR label
-        tk.Label(toolbar, text="SR (48kHz)", font=DEFAULT_FONT).grid(row=0, column=1, padx=(0, 20), sticky="w")
+        # SR label with checkbox
+        sr_label_frame = ttk.Frame(toolbar)
+        sr_label_frame.grid(row=0, column=1, padx=(0, 20), sticky="w")
 
-        # Loudness label
-        tk.Label(toolbar, text="Loudness Correction", font=DEFAULT_FONT).grid(row=0, column=2, padx=(0, 20), sticky="w")
+        self.apply_sr_var = tk.BooleanVar(value=True)
+        tk.Checkbutton(sr_label_frame, text="SR (48kHz)", font=DEFAULT_FONT,
+                       variable=self.apply_sr_var).pack(side="left")
+
+        # Loudness label (centered over radio buttons)
+        tk.Label(toolbar, text="Loudness Correction", font=DEFAULT_FONT).grid(row=0, column=2, padx=(0, 20), sticky="center")
 
         # Mode label
         tk.Label(toolbar, text="Mode:", font=DEFAULT_FONT).grid(row=0, column=3, padx=(0, 5), sticky="w")
@@ -344,9 +349,6 @@ class ClearVoiceApp:
         self.transcribe_srt_var = tk.BooleanVar(value=True)
         tk.Checkbutton(transcribe_format_frame, text="SRT", font=DEFAULT_FONT,
                        variable=self.transcribe_srt_var).pack(side="left", padx=(0, 5))
-
-        # Store SR variable for later use
-        self.apply_sr_var = tk.BooleanVar(value=True)
 
 
         # Main content: Selected files and controls
