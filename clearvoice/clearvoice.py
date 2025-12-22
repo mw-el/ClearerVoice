@@ -1,5 +1,5 @@
 from network_wrapper import network_wrapper
-from utils.audio_processing import apply_loudness_processing, log_processing_stats
+from utils.audio_processing import apply_loudness_processing, apply_dual_pass_loudness_processing, log_processing_stats
 import os
 import warnings
 import numpy as np
@@ -66,7 +66,11 @@ class ClearVoice:
 
     def _apply_loudness_to_results(self, results, sr):
         """
-        Apply loudness processing to model results.
+        Apply dual-pass loudness processing to model results.
+
+        Uses adaptive compression with two passes:
+        - Pass 1: Aggressive ratios (10:1, 5:1, 2:1) to lift quiet segments
+        - Pass 2: Normal ratios (4:1, 2:1, 1:1) to smooth and naturalize
 
         Handles both single waveforms and lists of waveforms (e.g., from speech separation).
 
@@ -81,13 +85,13 @@ class ClearVoice:
             # Multiple outputs (e.g., speech separation with 2 speakers)
             processed_results = []
             for waveform in results:
-                processed, stats = apply_loudness_processing(waveform, sr=sr)
+                processed, stats = apply_dual_pass_loudness_processing(waveform, sr=sr)
                 processed_results.append(processed)
                 print(log_processing_stats(stats))
             return processed_results
         else:
             # Single waveform output
-            processed, stats = apply_loudness_processing(results, sr=sr)
+            processed, stats = apply_dual_pass_loudness_processing(results, sr=sr)
             print(log_processing_stats(stats))
             return processed
 
