@@ -354,11 +354,11 @@ class ClearVoiceApp:
 
         self.transcribe_txt_var = tk.BooleanVar(value=True)
         tk.Checkbutton(transcribe_spacer, text="TXT", font=DEFAULT_FONT,
-                       variable=self.transcribe_txt_var).pack(side="left", padx=(0, 10))
+                       variable=self.transcribe_txt_var).pack(side="left", padx=(0, 5))
 
         self.transcribe_srt_var = tk.BooleanVar(value=True)
         tk.Checkbutton(transcribe_spacer, text="SRT", font=DEFAULT_FONT,
-                       variable=self.transcribe_srt_var).pack(side="left", padx=(0, 10))
+                       variable=self.transcribe_srt_var).pack(side="left", padx=(0, 5))
 
 
         # Main content: Selected files and controls
