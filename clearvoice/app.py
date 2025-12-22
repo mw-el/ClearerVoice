@@ -410,7 +410,7 @@ class ClearVoiceApp:
             return
 
         self.process_btn.config(state="disabled", text="Optimiert...")
-        thread = threading.Thread(target=self._process_files_thread)
+        thread = threading.Thread(target=self._process_files_thread, daemon=True)
         thread.start()
 
     def _process_files_thread(self):
@@ -466,8 +466,8 @@ class ClearVoiceApp:
                     cleaned_path = os.path.join(folder, f"{base_name}-cleaned-{timestamp}{output_ext}")
 
                     self.log_status("  Entrausche...")
-                    if self.apply_loudness_var.get():
-                        self.log_status("    (mit Lautstärke-Optimierung)")
+                    if self.loudness_moderate_var.get() or self.loudness_strong_var.get():
+                        self.log_status("    (mit Loudness-Optimierung)")
 
                     # DEBUG: Check model state before processing
                     self.log_status(f"  DEBUG: Model Loudness Flag = {self.myClearVoice.apply_loudness_processing}")
@@ -540,7 +540,7 @@ class ClearVoiceApp:
             return
 
         self.transcribe_btn.config(state="disabled", text="Transcribing...")
-        thread = threading.Thread(target=self._transcribe_files_thread)
+        thread = threading.Thread(target=self._transcribe_files_thread, daemon=True)
         thread.start()
 
     def _transcribe_files_thread(self):
