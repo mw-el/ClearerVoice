@@ -174,6 +174,12 @@ def apply_compressor(
     attack_samples = int(sr * attack_ms / 1000.0)
     release_samples = int(sr * release_ms / 1000.0)
 
+    # Convert attack/release times to exponential coefficients
+    # Coefficient = exp(-1 / (time_in_samples))
+    # This creates proper exponential envelope smoothing
+    attack_coeff = np.exp(-1.0 / max(1, attack_samples))
+    release_coeff = np.exp(-1.0 / max(1, release_samples))
+
     # Convert threshold from dB to linear
     threshold_linear = 10 ** (threshold_db / 20.0)
 
@@ -215,21 +221,19 @@ def apply_compressor(
             # Below threshold - no compression
             target_gain_db = 0.0
 
-        # Smooth the gain change using attack/release
+        # Smooth the gain change using exponential envelope (proper attack/release)
         if i == 0:
             current_gain_db = target_gain_db
         else:
-            current_gain_db = gain_envelope[i - 1]
+            prev_gain_db = gain_envelope[i - 1]
 
-        # Apply attack or release
-        if target_gain_db < current_gain_db:
-            # Gain reduction needed (attack)
-            max_change = (current_gain_db - target_gain_db) * attack_samples / (i + 1)
-            current_gain_db = max(target_gain_db, current_gain_db - max_change)
-        else:
-            # Gain increasing (release)
-            max_change = (target_gain_db - current_gain_db) * release_samples / (i + 1)
-            current_gain_db = min(target_gain_db, current_gain_db + max_change)
+            # Apply exponential smoothing based on attack or release
+            if target_gain_db < prev_gain_db:
+                # Gain reduction needed (attack) - compress toward target
+                current_gain_db = attack_coeff * prev_gain_db + (1.0 - attack_coeff) * target_gain_db
+            else:
+                # Gain increasing (release) - expand toward target
+                current_gain_db = release_coeff * prev_gain_db + (1.0 - release_coeff) * target_gain_db
 
         gain_envelope[i] = current_gain_db
 
@@ -505,6 +509,10 @@ def apply_adaptive_compressor(
     threshold_db = ratios.THRESHOLD_DB
     knee_width = ratios.KNEE_WIDTH_DB
 
+    # Convert attack/release times to exponential coefficients
+    attack_coeff = np.exp(-1.0 / max(1, attack_samples))
+    release_coeff = np.exp(-1.0 / max(1, release_samples))
+
     gain_envelope = np.ones_like(output)
 
     for i in range(len(output)):
@@ -526,18 +534,19 @@ def apply_adaptive_compressor(
         else:
             target_gain_db = 0.0
 
-        # Smooth gain with attack/release
+        # Smooth gain with exponential envelope (proper attack/release)
         if i == 0:
             current_gain_db = target_gain_db
         else:
-            current_gain_db = gain_envelope[i - 1]
+            prev_gain_db = gain_envelope[i - 1]
 
-        if target_gain_db < current_gain_db:
-            max_change = (current_gain_db - target_gain_db) * attack_samples / (i + 1)
-            current_gain_db = max(target_gain_db, current_gain_db - max_change)
-        else:
-            max_change = (target_gain_db - current_gain_db) * release_samples / (i + 1)
-            current_gain_db = min(target_gain_db, current_gain_db + max_change)
+            # Apply exponential smoothing based on attack or release
+            if target_gain_db < prev_gain_db:
+                # Gain reduction needed (attack)
+                current_gain_db = attack_coeff * prev_gain_db + (1.0 - attack_coeff) * target_gain_db
+            else:
+                # Gain increasing (release)
+                current_gain_db = release_coeff * prev_gain_db + (1.0 - release_coeff) * target_gain_db
 
         gain_envelope[i] = current_gain_db
 
