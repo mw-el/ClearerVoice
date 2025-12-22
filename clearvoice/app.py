@@ -325,26 +325,40 @@ class ClearVoiceApp:
         """Handle right-click on treeview (context menu)"""
         item = self.file_tree.identify_row(event.y)
         if item:
+            # If clicked item is not in selection, select only it
+            if item not in self.file_tree.selection():
+                self.file_tree.selection_set(item)
+
+            # Get all selected items
+            selected_items = self.file_tree.selection()
+
             # Show context menu
             context_menu = tk.Menu(self.root, tearoff=0)
-            context_menu.add_command(
-                label="Löschen",
-                command=lambda: self._delete_file_item(item)
-            )
+            if len(selected_items) == 1:
+                context_menu.add_command(
+                    label="Löschen",
+                    command=lambda: self._delete_file_items(selected_items)
+                )
+            else:
+                context_menu.add_command(
+                    label=f"Alle {len(selected_items)} löschen",
+                    command=lambda: self._delete_file_items(selected_items)
+                )
             context_menu.post(event.x_root, event.y_root)
 
-    def _delete_file_item(self, item_id):
-        """Delete a file from the list"""
-        values = self.file_tree.item(item_id, "values")
-        filename = values[0]
-        # Find and remove from selected_files
-        for i, f in enumerate(self.selected_files):
-            if os.path.basename(f) == filename:
-                self.selected_files.pop(i)
-                break
-        # Remove from treeview
-        self.file_tree.delete(item_id)
-        self.log_status(f"- {filename}")
+    def _delete_file_items(self, item_ids):
+        """Delete multiple files from the list"""
+        for item_id in item_ids:
+            values = self.file_tree.item(item_id, "values")
+            filename = values[0]
+            # Find and remove from selected_files
+            for i, f in enumerate(self.selected_files):
+                if os.path.basename(f) == filename:
+                    self.selected_files.pop(i)
+                    break
+            # Remove from treeview
+            self.file_tree.delete(item_id)
+            self.log_status(f"- {filename}")
 
     def log_status(self, message):
         """Add message to status window"""
