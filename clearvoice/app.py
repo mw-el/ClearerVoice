@@ -136,24 +136,11 @@ SCALED_FONT_SIZE = max(11, int(BASE_FONT_SIZE * DPI_SCALE))
 SCALED_FONT_SIZE_LARGE = max(12, int(12 * DPI_SCALE))  # For headings
 SCALED_FONT_SIZE_SMALL = max(9, int(9 * DPI_SCALE))    # For small text
 
-# Use Ubuntu font if available, fallback to default
-try:
-    # Test if Ubuntu font is available
-    test_font = font.Font(family="Ubuntu", size=10)
-    DEFAULT_FONT = ('Ubuntu', SCALED_FONT_SIZE)
-    BOLD_FONT = ('Ubuntu', SCALED_FONT_SIZE, 'bold')
-    HEADING_FONT = ('Ubuntu', SCALED_FONT_SIZE_LARGE, 'bold')
-    MONO_FONT = ('Ubuntu Mono', SCALED_FONT_SIZE - 1)
-    print("DEBUG: Ubuntu-Schrift verfügbar - verwende Ubuntu")
-except tk.TclError:
-    # Fallback to system defaults if Ubuntu not available
-    print("DEBUG: Ubuntu-Schrift nicht verfügbar - verwende System-Standard")
-    DEFAULT_FONT = ('TkDefaultFont', SCALED_FONT_SIZE)
-    BOLD_FONT = ('TkDefaultFont', SCALED_FONT_SIZE, 'bold')
-    HEADING_FONT = ('TkDefaultFont', SCALED_FONT_SIZE_LARGE, 'bold')
-    MONO_FONT = ('TkFixedFont', SCALED_FONT_SIZE - 1)
-
-print(f"DEBUG: Font-Größe: {SCALED_FONT_SIZE}, DPI-Skalierung: {DPI_SCALE:.2f}")
+# Font definitions will be set up after root window is created
+DEFAULT_FONT = None
+BOLD_FONT = None
+HEADING_FONT = None
+MONO_FONT = None
 
 
 # --------- File Selection Helper ---------
@@ -197,6 +184,9 @@ class ClearVoiceApp:
         self.root = root
         self.root.title("ClearerVoice - Speech Enhancement")
 
+        # Set up fonts now that root window exists
+        self._setup_fonts()
+
         # Scale window size with DPI
         win_width = int(1000 * DPI_SCALE)
         win_height = int(600 * DPI_SCALE)
@@ -216,6 +206,28 @@ class ClearVoiceApp:
 
         self.create_widgets()
         print("DEBUG: GUI initialisiert")
+
+    def _setup_fonts(self):
+        """Set up fonts with Ubuntu preference and DPI scaling"""
+        global DEFAULT_FONT, BOLD_FONT, HEADING_FONT, MONO_FONT
+
+        try:
+            # Test if Ubuntu font is available
+            test_font = font.Font(family="Ubuntu", size=10)
+            DEFAULT_FONT = ('Ubuntu', SCALED_FONT_SIZE)
+            BOLD_FONT = ('Ubuntu', SCALED_FONT_SIZE, 'bold')
+            HEADING_FONT = ('Ubuntu', SCALED_FONT_SIZE_LARGE, 'bold')
+            MONO_FONT = ('Ubuntu Mono', SCALED_FONT_SIZE - 1)
+            print("DEBUG: Ubuntu-Schrift verfügbar - verwende Ubuntu")
+        except tk.TclError:
+            # Fallback to system defaults if Ubuntu not available
+            print("DEBUG: Ubuntu-Schrift nicht verfügbar - verwende System-Standard")
+            DEFAULT_FONT = ('TkDefaultFont', SCALED_FONT_SIZE)
+            BOLD_FONT = ('TkDefaultFont', SCALED_FONT_SIZE, 'bold')
+            HEADING_FONT = ('TkDefaultFont', SCALED_FONT_SIZE_LARGE, 'bold')
+            MONO_FONT = ('TkFixedFont', SCALED_FONT_SIZE - 1)
+
+        print(f"DEBUG: Font-Größe: {SCALED_FONT_SIZE}, DPI-Skalierung: {DPI_SCALE:.2f}")
 
     def create_widgets(self):
         # Top: File selection and Options
