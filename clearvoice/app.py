@@ -247,6 +247,16 @@ class ClearVoiceApp:
         ttk.Checkbutton(options_frame, text="Lautstärke",
                         variable=self.apply_loudness_var).pack(side="left", padx=(0, 5))
 
+        # Loudness strength options (Moderate/Strong)
+        loudness_frame = ttk.Frame(options_frame)
+        loudness_frame.pack(side="left", padx=(0, 5))
+
+        self.loudness_strength_var = tk.StringVar(value='strong')
+        ttk.Radiobutton(loudness_frame, text="Soft",
+                        variable=self.loudness_strength_var, value='moderate').pack(side="left", padx=(0, 3))
+        ttk.Radiobutton(loudness_frame, text="Stark",
+                        variable=self.loudness_strength_var, value='strong').pack(side="left", padx=(0, 5))
+
         self.remux_video_var = tk.BooleanVar(value=True)
         ttk.Checkbutton(options_frame, text="Video",
                         variable=self.remux_video_var).pack(side="left", padx=(0, 20))
@@ -408,10 +418,14 @@ class ClearVoiceApp:
             try:
                 from clearvoice import ClearVoice
                 loudness_enabled = self.apply_loudness_var.get()
+                loudness_strength = self.loudness_strength_var.get()
                 self.log_status(f"  Loudness-Optimierung: {'aktiviert' if loudness_enabled else 'deaktiviert'}")
+                if loudness_enabled:
+                    self.log_status(f"  Loudness-Stärke: {loudness_strength}")
                 self.myClearVoice = ClearVoice(task='speech_enhancement',
                                                 model_names=['MossFormer2_SE_48K'],
-                                                apply_loudness_processing_flag=loudness_enabled)
+                                                apply_loudness_processing_flag=loudness_enabled,
+                                                loudness_strength=loudness_strength)
                 self.log_status("Modell geladen!")
             except Exception as e:
                 self.log_status(f"FEHLER: {e}")
