@@ -213,14 +213,10 @@ class ClearVoiceApp:
         self.create_widgets()
         print("DEBUG: GUI initialisiert")
 
-    def _toggle_loudness(self, strength):
-        """Toggle loudness strength checkboxes - mutually exclusive"""
-        if strength == 'moderate':
-            self.loudness_moderate_var.set(True)
-            self.loudness_strong_var.set(False)
-        else:  # strong
-            self.loudness_strong_var.set(True)
-            self.loudness_moderate_var.set(False)
+    def _on_loudness_preset_changed(self):
+        """Handle loudness preset change - just log it"""
+        preset = self.loudness_preset_var.get()
+        self.log_status(f"Loudness Preset: {preset.capitalize()}")
 
     def _setup_fonts(self):
         """Set up fonts with Ubuntu preference and DPI scaling"""
@@ -262,19 +258,21 @@ class ClearVoiceApp:
         tk.Checkbutton(row1, text="SR (48kHz)", font=DEFAULT_FONT,
                        variable=self.apply_sr_var).pack(side="left", padx=(0, 10))
 
-        # Loudness checkboxes (vertically stacked, mutually exclusive)
+        # Loudness preset selector (radio buttons for 3 options)
         loudness_frame = ttk.Frame(row1)
         loudness_frame.pack(side="left", padx=(0, 10))
 
-        self.loudness_moderate_var = tk.BooleanVar(value=False)
-        self.loudness_strong_var = tk.BooleanVar(value=True)
+        self.loudness_preset_var = tk.StringVar(value='moderate')
 
-        tk.Checkbutton(loudness_frame, text="Loudness+", font=DEFAULT_FONT,
-                       variable=self.loudness_moderate_var,
-                       command=lambda: self._toggle_loudness('moderate')).pack(anchor="w")
-        tk.Checkbutton(loudness_frame, text="Loudness++", font=DEFAULT_FONT,
-                       variable=self.loudness_strong_var,
-                       command=lambda: self._toggle_loudness('strong')).pack(anchor="w")
+        tk.Radiobutton(loudness_frame, text="Soft", font=DEFAULT_FONT,
+                       variable=self.loudness_preset_var, value='soft',
+                       command=self._on_loudness_preset_changed).pack(anchor="w")
+        tk.Radiobutton(loudness_frame, text="Moderate", font=DEFAULT_FONT,
+                       variable=self.loudness_preset_var, value='moderate',
+                       command=self._on_loudness_preset_changed).pack(anchor="w")
+        tk.Radiobutton(loudness_frame, text="Strong", font=DEFAULT_FONT,
+                       variable=self.loudness_preset_var, value='strong',
+                       command=self._on_loudness_preset_changed).pack(anchor="w")
 
         self.remux_video_var = tk.BooleanVar(value=True)
         tk.Checkbutton(row1, text="Videomux", font=DEFAULT_FONT,
@@ -437,19 +435,16 @@ class ClearVoiceApp:
             self.log_status("=" * 40)
             self.log_status("Starte Verarbeitung...")
 
-            # Always reload model to respect current loudness checkbox state
+            # Load ClearVoice WITHOUT loudness processing (will apply after SR)
             self.log_status("Lade ClearVoice Modell...")
             try:
                 from clearvoice import ClearVoice
-                loudness_enabled = self.loudness_moderate_var.get() or self.loudness_strong_var.get()
-                loudness_strength = 'moderate' if self.loudness_moderate_var.get() else 'strong'
-                self.log_status(f"  Loudness-Optimierung: {'aktiviert' if loudness_enabled else 'deaktiviert'}")
-                if loudness_enabled:
-                    self.log_status(f"  Loudness-Stärke: {loudness_strength}")
+                loudness_preset = self.loudness_preset_var.get()
+                self.log_status(f"  Loudness Preset: {loudness_preset.capitalize()} (wird nach SR angewendet)")
+                # Load ClearVoice WITHOUT loudness - we apply it after SR
                 self.myClearVoice = ClearVoice(task='speech_enhancement',
                                                 model_names=['MossFormer2_SE_48K'],
-                                                apply_loudness_processing_flag=loudness_enabled,
-                                                loudness_strength=loudness_strength)
+                                                apply_loudness_processing_flag=False)
                 self.log_status("Modell geladen!")
             except Exception as e:
                 self.log_status(f"FEHLER: {e}")
@@ -484,11 +479,6 @@ class ClearVoiceApp:
                     cleaned_path = os.path.join(folder, f"{base_name}-cleaned-{timestamp}{output_ext}")
 
                     self.log_status("  Entrausche...")
-                    if self.loudness_moderate_var.get() or self.loudness_strong_var.get():
-                        self.log_status("    (mit Loudness-Optimierung)")
-
-                    # DEBUG: Check model state before processing
-                    self.log_status(f"  DEBUG: Model Loudness Flag = {self.myClearVoice.apply_loudness_processing}")
 
                     enhanced_audio = self.myClearVoice(input_path=audio_to_process, online_write=False)
                     self.log_status(f"  Enhancement abgeschlossen")
@@ -516,9 +506,36 @@ class ClearVoiceApp:
                         self.myClearVoice_SR.write(sr_audio, output_path=sr_output)
                         self.log_status(f"  → {os.path.basename(sr_output)}")
                         final_audio = sr_output
+                    else:
+                        # No SR - use cleaned audio as final
+                        final_audio = cleaned_path
+
+                    # Apply loudness processing AFTER SR (or after cleaning if no SR)
+                    loudness_preset = self.loudness_preset_var.get()
+                    self.log_status(f"  Wende Loudness ({loudness_preset}) an...")
+                    try:
+                        import numpy as np
+                        from clearvoice.utils.audio_processing import apply_dual_pass_loudness_processing, log_processing_stats
+                        import soundfile as sf
+
+                        # Read the audio file
+                        audio_data, sr_value = sf.read(final_audio)
+
+                        # Apply loudness processing with selected preset
+                        processed_audio, stats = apply_dual_pass_loudness_processing(
+                            audio_data, sr=sr_value, strength=loudness_preset
+                        )
+
+                        # Write back to the same file (overwrite)
+                        sf.write(final_audio, processed_audio, sr_value)
+                        self.log_status(f"    Loudness angewendet")
+                        self.log_status(log_processing_stats(stats))
+                    except Exception as loudness_error:
+                        self.log_status(f"  FEHLER bei Loudness: {loudness_error}")
+                        import traceback
+                        self.log_status(traceback.format_exc())
 
                     # Remux video with cleaned audio if requested
-                    self.log_status(f"  DEBUG: is_video={is_video}, remux_enabled={self.remux_video_var.get()}")
                     if is_video and self.remux_video_var.get():
                         self.log_status("  Remuxe Video mit bereinigtem Audio...")
                         remuxed_path = os.path.join(folder, f"{base_name}-cleaned-{timestamp}{ext}")

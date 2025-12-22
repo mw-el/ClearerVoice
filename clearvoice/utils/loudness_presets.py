@@ -30,8 +30,39 @@ class AdaptiveCompressionRatios:
     - NORMAL: Normal conversational speech (-25 to -15 dB RMS)
     - LOUD: Loud speech or shouting (-15 to -5 dB RMS)
 
-    Two presets available: MODERATE and STRONG
+    Three presets available: SOFT, MODERATE, and STRONG
     """
+
+    class Soft:
+        """
+        Soft Preset: For gentle loudness enhancement with minimal artifacts.
+
+        Use this for:
+        - Audio that has already been through some processing
+        - When you want subtle enhancement
+        - To avoid over-processing artifacts
+        """
+        class PassOne:
+            """Soft Pass 1: Very gentle lifting of quiet segments"""
+            WHISPER_RATIO = 4.0   # 4:1 - gentle on quiet parts
+            NORMAL_RATIO = 2.5    # 2.5:1 - very light on normal speech
+            LOUD_RATIO = 1.5      # 1.5:1 - minimal on loud parts
+
+            THRESHOLD_DB = -18.0  # Higher threshold = less compression
+            ATTACK_MS = 40.0      # Slower attack for smoothness
+            RELEASE_MS = 200.0    # Slow release to breathe
+            KNEE_WIDTH_DB = 5.0   # Wide knee for soft transition
+
+        class PassTwo:
+            """Soft Pass 2: Minimal smoothing"""
+            WHISPER_RATIO = 1.5   # 1.5:1 - barely any compression
+            NORMAL_RATIO = 1.2    # 1.2:1 - almost no compression
+            LOUD_RATIO = 1.0      # 1:1 - no compression on loud
+
+            THRESHOLD_DB = -16.0  # Higher threshold
+            ATTACK_MS = 50.0      # Very slow attack
+            RELEASE_MS = 250.0    # Very slow release
+            KNEE_WIDTH_DB = 6.0   # Very soft knee
 
     class Moderate:
         """
