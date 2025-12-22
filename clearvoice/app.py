@@ -207,6 +207,16 @@ class ClearVoiceApp:
         self.create_widgets()
         print("DEBUG: GUI initialisiert")
 
+    def _toggle_loudness_strength(self, strength):
+        """Toggle loudness strength and ensure only one is selected"""
+        self.loudness_strength_var.set(strength)
+        if strength == 'moderate':
+            self.soft_button.select()
+            self.stark_button.deselect()
+        else:  # strong
+            self.stark_button.select()
+            self.soft_button.deselect()
+
     def _setup_fonts(self):
         """Set up fonts with Ubuntu preference and DPI scaling"""
         global DEFAULT_FONT, BOLD_FONT, HEADING_FONT, MONO_FONT
@@ -230,55 +240,69 @@ class ClearVoiceApp:
         print(f"DEBUG: Font-Größe: {SCALED_FONT_SIZE}, DPI-Skalierung: {DPI_SCALE:.2f}")
 
     def create_widgets(self):
-        # Top: File selection and Options
-        options_frame = ttk.Frame(self.root)
-        options_frame.pack(fill="x", padx=5, pady=5)
+        # Top toolbar with two rows
+        toolbar = ttk.Frame(self.root)
+        toolbar.pack(fill="x", padx=5, pady=5)
+
+        # ===== ROW 1: File picker and enhancement options =====
+        row1 = ttk.Frame(toolbar)
+        row1.pack(fill="x", pady=(0, 5))
 
         # File picker button (left side)
-        ttk.Button(options_frame, text="[ + ] Dateien hinzufügen",
+        ttk.Button(row1, text="[ + ] Dateien hinzufügen",
                    command=self._open_file_picker).pack(side="left", padx=(0, 10))
 
-        # Enhancement checkboxes (SR, Loudness, Video)
+        # Enhancement checkboxes (SR, Loudness, VideMux)
         self.apply_sr_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(options_frame, text="SR (48kHz)",
-                        variable=self.apply_sr_var).pack(side="left", padx=(0, 5))
+        ttk.Checkbutton(row1, text="SR (48kHz)",
+                        variable=self.apply_sr_var).pack(side="left", padx=(0, 10))
 
         self.apply_loudness_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(options_frame, text="Lautstärke",
-                        variable=self.apply_loudness_var).pack(side="left", padx=(0, 5))
-
-        # Loudness strength options (Moderate/Strong)
-        loudness_frame = ttk.Frame(options_frame)
-        loudness_frame.pack(side="left", padx=(0, 5))
-
-        self.loudness_strength_var = tk.StringVar(value='strong')
-        ttk.Radiobutton(loudness_frame, text="Soft",
-                        variable=self.loudness_strength_var, value='moderate').pack(side="left", padx=(0, 3))
-        ttk.Radiobutton(loudness_frame, text="Stark",
-                        variable=self.loudness_strength_var, value='strong').pack(side="left", padx=(0, 5))
+        ttk.Checkbutton(row1, text="Lautstärke",
+                        variable=self.apply_loudness_var).pack(side="left", padx=(0, 10))
 
         self.remux_video_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(options_frame, text="Video",
+        ttk.Checkbutton(row1, text="Videomux",
                         variable=self.remux_video_var).pack(side="left", padx=(0, 20))
 
-        # Process button (after enhancement options)
-        self.process_btn = ttk.Button(options_frame, text="Optimieren",
+        # Process button
+        self.process_btn = ttk.Button(row1, text="Optimieren",
                                       command=self.process_files)
-        self.process_btn.pack(side="left", padx=(0, 20))
+        self.process_btn.pack(side="left", padx=(0, 50))
 
-        # Transcribe button
-        self.transcribe_btn = ttk.Button(options_frame, text="Transcribe",
+        # Transcribe button (right side with spacing)
+        self.transcribe_btn = ttk.Button(row1, text="Transcribe",
                                          command=self.transcribe_files)
         self.transcribe_btn.pack(side="left", padx=(0, 10))
 
         # Transcription format checkboxes (TXT, SRT)
         self.transcribe_txt_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(options_frame, text="TXT",
+        ttk.Checkbutton(row1, text="TXT",
                         variable=self.transcribe_txt_var).pack(side="left", padx=(0, 5))
 
         self.transcribe_srt_var = tk.BooleanVar(value=True)
-        ttk.Checkbutton(options_frame, text="SRT",
+        ttk.Checkbutton(row1, text="SRT",
                         variable=self.transcribe_srt_var).pack(side="left", padx=(0, 10))
+
+        # ===== ROW 2: Loudness strength options =====
+        row2 = ttk.Frame(toolbar)
+        row2.pack(fill="x")
+
+        # Loudness strength label and toggle buttons (using tk.Checkbutton but only one active at a time)
+        ttk.Label(row2, text="Lautstärke-Stärke:", font=DEFAULT_FONT).pack(side="left", padx=(0, 10))
+
+        self.loudness_strength_var = tk.StringVar(value='strong')
+        self.soft_button = tk.Checkbutton(row2, text="Soft", font=DEFAULT_FONT,
+                                          command=lambda: self._toggle_loudness_strength('moderate'))
+        self.soft_button.pack(side="left", padx=(0, 5))
+
+        self.stark_button = tk.Checkbutton(row2, text="Stark", font=DEFAULT_FONT,
+                                           command=lambda: self._toggle_loudness_strength('strong'),
+                                           state='normal')
+        self.stark_button.pack(side="left", padx=(0, 20))
+
+        # Set initial state
+        self.stark_button.select()  # Stark is selected by default
 
         # Main content: Selected files and controls
         right_frame = ttk.Frame(self.root)
