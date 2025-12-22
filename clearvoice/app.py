@@ -257,23 +257,20 @@ class ClearVoiceApp:
         row1 = ttk.Frame(toolbar)
         row1.pack(fill="x", pady=(0, 5))
 
-        # File picker button with Material Design icon (left side)
+        # File picker button with Material Design outlined folder icon
         try:
             import os
-            icon_path = os.path.join(os.path.dirname(__file__), '../assets/icons/folder_24.png')
+            icon_path = os.path.join(os.path.dirname(__file__), '../assets/icons/folder_outlined_24.png')
             if os.path.exists(icon_path):
                 from PIL import Image, ImageTk
                 img = Image.open(icon_path)
                 self.folder_icon = ImageTk.PhotoImage(img)
-                file_btn = tk.Button(row1, image=self.folder_icon, command=self._open_file_picker,
-                                     width=28, height=28, relief=tk.FLAT, bg='white')
-                file_btn.pack(side="left", padx=(0, 10))
+                tk.Button(row1, image=self.folder_icon, command=self._open_file_picker,
+                         relief=tk.RAISED, bd=1).pack(side="left", padx=(0, 10))
             else:
-                # Fallback if icon not found
                 tk.Button(row1, text="📁", font=DEFAULT_FONT,
                           command=self._open_file_picker, width=3).pack(side="left", padx=(0, 10))
         except Exception as e:
-            # Fallback to emoji if PIL not available
             tk.Button(row1, text="📁", font=DEFAULT_FONT,
                       command=self._open_file_picker, width=3).pack(side="left", padx=(0, 10))
 
