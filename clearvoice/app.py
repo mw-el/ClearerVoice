@@ -289,7 +289,7 @@ class ClearVoiceApp:
                        variable=self.apply_sr_var).pack(side="left")
 
         # Loudness label (centered over radio buttons)
-        tk.Label(toolbar, text="Loudness Correction", font=DEFAULT_FONT).grid(row=0, column=2, padx=(0, 20), sticky="center")
+        tk.Label(toolbar, text="Loudness Correction", font=DEFAULT_FONT).grid(row=0, column=2, padx=(0, 20), sticky="ew")
 
         # Mode label
         tk.Label(toolbar, text="Mode:", font=DEFAULT_FONT).grid(row=0, column=3, padx=(0, 5), sticky="w")
