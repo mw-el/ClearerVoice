@@ -4,7 +4,7 @@ import sys
 import subprocess
 import datetime
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+from tkinter import ttk, messagebox, filedialog, font
 import threading
 import shutil
 
@@ -131,12 +131,29 @@ def get_dpi_scale():
     return scale
 
 DPI_SCALE = get_dpi_scale()
-BASE_FONT_SIZE = 10
-SCALED_FONT_SIZE = max(10, int(BASE_FONT_SIZE * DPI_SCALE))
-DEFAULT_FONT = ('Segoe UI', SCALED_FONT_SIZE)
-BOLD_FONT = ('Segoe UI', SCALED_FONT_SIZE, 'bold')
-MONO_FONT = ('Monospace', SCALED_FONT_SIZE - 1)
-print(f"DEBUG: Font-Größe: {SCALED_FONT_SIZE}")
+BASE_FONT_SIZE = 11  # Increased from 10 for better readability
+SCALED_FONT_SIZE = max(11, int(BASE_FONT_SIZE * DPI_SCALE))
+SCALED_FONT_SIZE_LARGE = max(12, int(12 * DPI_SCALE))  # For headings
+SCALED_FONT_SIZE_SMALL = max(9, int(9 * DPI_SCALE))    # For small text
+
+# Use Ubuntu font if available, fallback to default
+try:
+    # Test if Ubuntu font is available
+    test_font = font.Font(family="Ubuntu", size=10)
+    DEFAULT_FONT = ('Ubuntu', SCALED_FONT_SIZE)
+    BOLD_FONT = ('Ubuntu', SCALED_FONT_SIZE, 'bold')
+    HEADING_FONT = ('Ubuntu', SCALED_FONT_SIZE_LARGE, 'bold')
+    MONO_FONT = ('Ubuntu Mono', SCALED_FONT_SIZE - 1)
+    print("DEBUG: Ubuntu-Schrift verfügbar - verwende Ubuntu")
+except tk.TclError:
+    # Fallback to system defaults if Ubuntu not available
+    print("DEBUG: Ubuntu-Schrift nicht verfügbar - verwende System-Standard")
+    DEFAULT_FONT = ('TkDefaultFont', SCALED_FONT_SIZE)
+    BOLD_FONT = ('TkDefaultFont', SCALED_FONT_SIZE, 'bold')
+    HEADING_FONT = ('TkDefaultFont', SCALED_FONT_SIZE_LARGE, 'bold')
+    MONO_FONT = ('TkFixedFont', SCALED_FONT_SIZE - 1)
+
+print(f"DEBUG: Font-Größe: {SCALED_FONT_SIZE}, DPI-Skalierung: {DPI_SCALE:.2f}")
 
 
 # --------- File Selection Helper ---------
@@ -249,7 +266,7 @@ class ClearVoiceApp:
         list_header_frame = ttk.Frame(right_frame)
         list_header_frame.pack(fill="x", padx=5, pady=(5, 0))
 
-        ttk.Label(list_header_frame, text="Ausgewählte Dateien").pack(side="left")
+        ttk.Label(list_header_frame, text="Ausgewählte Dateien", font=HEADING_FONT).pack(side="left")
 
         list_frame = ttk.LabelFrame(right_frame, text="")
         list_frame.pack(fill="both", expand=True, padx=5, pady=5)
