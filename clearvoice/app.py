@@ -253,38 +253,48 @@ class ClearVoiceApp:
         toolbar = ttk.Frame(self.root)
         toolbar.pack(fill="x", padx=5, pady=5)
 
-        # ===== ROW 1: File picker and enhancement options =====
+        # ===== ROW 1: Main controls =====
         row1 = ttk.Frame(toolbar)
         row1.pack(fill="x", pady=(0, 5))
 
-        # File picker button (left side)
-        tk.Button(row1, text="[ + ] Dateien hinzufügen", font=DEFAULT_FONT,
-                  command=self._open_file_picker).pack(side="left", padx=(0, 10))
+        # File picker button (folder icon, left side)
+        tk.Button(row1, text="📁", font=DEFAULT_FONT,
+                  command=self._open_file_picker, width=3).pack(side="left", padx=(0, 10))
 
-        # Enhancement checkboxes (SR, Loudness, VideMux)
+        # SR and Videomux vertical frame
+        sr_video_frame = ttk.Frame(row1)
+        sr_video_frame.pack(side="left", padx=(0, 10))
+
         self.apply_sr_var = tk.BooleanVar(value=True)
-        tk.Checkbutton(row1, text="SR (48kHz)", font=DEFAULT_FONT,
-                       variable=self.apply_sr_var).pack(side="left", padx=(0, 10))
+        tk.Checkbutton(sr_video_frame, text="SR (48kHz)", font=DEFAULT_FONT,
+                       variable=self.apply_sr_var).pack(anchor="w")
 
-        # Loudness preset selector (radio buttons for 3 options)
+        self.remux_video_var = tk.BooleanVar(value=True)
+        tk.Checkbutton(sr_video_frame, text="Videomux", font=DEFAULT_FONT,
+                       variable=self.remux_video_var).pack(anchor="w")
+
+        # Loudness preset selector with label
         loudness_frame = ttk.Frame(row1)
         loudness_frame.pack(side="left", padx=(0, 10))
 
+        # Loudness label
+        tk.Label(loudness_frame, text="Loudness Correction", font=DEFAULT_FONT).pack(anchor="w")
+
+        # Radio buttons with + symbols (horizontal)
+        loudness_buttons_frame = ttk.Frame(loudness_frame)
+        loudness_buttons_frame.pack(anchor="w")
+
         self.loudness_preset_var = tk.StringVar(value='moderate')
 
-        tk.Radiobutton(loudness_frame, text="Soft", font=DEFAULT_FONT,
+        tk.Radiobutton(loudness_buttons_frame, text="+", font=DEFAULT_FONT,
                        variable=self.loudness_preset_var, value='soft',
-                       command=self._on_loudness_preset_changed).pack(anchor="w")
-        tk.Radiobutton(loudness_frame, text="Moderate", font=DEFAULT_FONT,
+                       command=self._on_loudness_preset_changed).pack(side="left", padx=(0, 5))
+        tk.Radiobutton(loudness_buttons_frame, text="++", font=DEFAULT_FONT,
                        variable=self.loudness_preset_var, value='moderate',
-                       command=self._on_loudness_preset_changed).pack(anchor="w")
-        tk.Radiobutton(loudness_frame, text="Strong", font=DEFAULT_FONT,
+                       command=self._on_loudness_preset_changed).pack(side="left", padx=(0, 5))
+        tk.Radiobutton(loudness_buttons_frame, text="+++", font=DEFAULT_FONT,
                        variable=self.loudness_preset_var, value='strong',
-                       command=self._on_loudness_preset_changed).pack(anchor="w")
-
-        self.remux_video_var = tk.BooleanVar(value=True)
-        tk.Checkbutton(row1, text="Videomux", font=DEFAULT_FONT,
-                       variable=self.remux_video_var).pack(side="left", padx=(0, 10))
+                       command=self._on_loudness_preset_changed).pack(side="left", padx=(0, 5))
 
         # Processing mode selector
         tk.Label(row1, text="Mode:", font=DEFAULT_FONT).pack(side="left", padx=(0, 5))
@@ -297,27 +307,31 @@ class ClearVoiceApp:
         mode_dropdown = ttk.Combobox(row1, textvariable=self.processing_mode_var,
                                       values=list(self.mode_display_map.values()),
                                       state='readonly', width=40, font=DEFAULT_FONT)
-        mode_dropdown.pack(side="left", padx=(0, 20))
+        mode_dropdown.pack(side="left", padx=(0, 10))
         # Set friendly display names
         mode_dropdown.set(self.mode_display_map['full'])
 
         # Process button
         self.process_btn = tk.Button(row1, text="Optimieren", font=DEFAULT_FONT,
                                      command=self.process_files)
-        self.process_btn.pack(side="left", padx=(0, 50))
+        self.process_btn.pack(side="left", padx=(0, 5))
 
-        # Transcribe button (right side with spacing)
+        # Transcribe button
         self.transcribe_btn = tk.Button(row1, text="Transcribe", font=DEFAULT_FONT,
                                         command=self.transcribe_files)
         self.transcribe_btn.pack(side="left", padx=(0, 10))
 
+        # ===== ROW 2: Transcription format options =====
+        row2 = ttk.Frame(toolbar)
+        row2.pack(fill="x")
+
         # Transcription format checkboxes (TXT, SRT)
         self.transcribe_txt_var = tk.BooleanVar(value=True)
-        tk.Checkbutton(row1, text="TXT", font=DEFAULT_FONT,
-                       variable=self.transcribe_txt_var).pack(side="left", padx=(0, 5))
+        tk.Checkbutton(row2, text="TXT", font=DEFAULT_FONT,
+                       variable=self.transcribe_txt_var).pack(side="left", padx=(0, 10))
 
         self.transcribe_srt_var = tk.BooleanVar(value=True)
-        tk.Checkbutton(row1, text="SRT", font=DEFAULT_FONT,
+        tk.Checkbutton(row2, text="SRT", font=DEFAULT_FONT,
                        variable=self.transcribe_srt_var).pack(side="left", padx=(0, 10))
 
 
