@@ -704,14 +704,15 @@ class ClearVoiceApp:
             self.log_status("=" * 40)
             self.log_status("Starte Transkription...")
 
+            # Record time BEFORE ANY transcription (at the start of thread)
+            thread_start_time = datetime.datetime.now()
+
             total = len(self.selected_files)
             for idx, input_file in enumerate(self.selected_files, 1):
                 filename = os.path.basename(input_file)
                 self.log_status(f"\n[{idx}/{total}] Transkribiere: {filename}")
 
                 try:
-                    # Record time BEFORE transcription (before any operations)
-                    before_time = datetime.datetime.now()
 
                     # Get output folder and base name
                     output_folder = os.path.dirname(input_file)
@@ -764,13 +765,12 @@ class ClearVoiceApp:
                         self.log_status(f"  Versuche stattdessen: {transcriptions_dir}")
 
                     # Find newly created transcription files
-                    # First try to find files newer than before_time, fallback to latest folder
-                    transcript_files = self._find_transcription_files(transcriptions_dir, before_time)
+                    # Strategy: Try newest folder first (most reliable), then time-based filter
+                    transcript_files = self._find_latest_transcription_files(transcriptions_dir)
 
-                    # If no files found with time filter, try the newest folder
                     if not transcript_files:
-                        self.log_status(f"  DEBUG: Keine neuen Dateien gefunden, versuche neuesten Ordner...")
-                        transcript_files = self._find_latest_transcription_files(transcriptions_dir)
+                        self.log_status(f"  DEBUG: Neuester Ordner hatte keine Dateien, versuche Zeit-Filter...")
+                        transcript_files = self._find_transcription_files(transcriptions_dir, thread_start_time)
 
                     self.log_status(f"  DEBUG: Gefundene Dateien: {len(transcript_files)}")
 
