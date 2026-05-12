@@ -13,3 +13,6 @@ clearvoice/samples/path_to_output_*/
 
 # Old app versions
 clearvoice/app2502*.py
+
+# Persönliche Notizen (nie committen)
+_MA_*.txt
